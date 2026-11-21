@@ -48,19 +48,33 @@ class Settings:
         return f"Settings(model={self.model!r}, params={self.generation_params()!r})"
 
 
+# provedor -> (variável da chave, variável do modelo, modelo padrão, onde obter a chave)
+PROVIDERS = {
+    "openrouter": ("OPENROUTER_API_KEY", "OPENROUTER_MODEL", "google/gemma-4-31b-it:free",
+                   "https://openrouter.ai/keys"),
+    "gemini": ("GEMINI_API_KEY", "GEMINI_MODEL", "gemini-2.5-flash",
+               "https://aistudio.google.com/apikey"),
+}
+
+
 def load_settings(require_api_key: bool = True, env_file: Path | None = None) -> Settings:
     load_dotenv(env_file or PROJECT_ROOT / ".env")
 
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    provider = os.getenv("LLM_PROVIDER", "openrouter").strip().lower()
+    if provider not in PROVIDERS:
+        raise ConfigError(f"LLM_PROVIDER inválido: {provider!r}. Opções: {', '.join(PROVIDERS)}.")
+    key_var, model_var, default_model, key_url = PROVIDERS[provider]
+
+    api_key = os.getenv(key_var, "").strip()
     if require_api_key and not api_key:
         raise ConfigError(
-            "GEMINI_API_KEY não definida. Copie .env.example para .env e preencha a chave "
-            "(https://aistudio.google.com/apikey)."
+            f"{key_var} não definida. Copie .env.example para .env e preencha a chave ({key_url})."
         )
 
     return Settings(
+        provider=provider,
         api_key=api_key,
-        model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip(),
+        model=os.getenv(model_var, "").strip() or default_model,
         temperature=_number("LLM_TEMPERATURE", 0.2, float, 0.0, 2.0),
         max_output_tokens=_number("LLM_MAX_OUTPUT_TOKENS", 2048, int, 1, 65536),
         seed=_optional_int("LLM_SEED", 42),
