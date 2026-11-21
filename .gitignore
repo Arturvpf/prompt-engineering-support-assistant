@@ -1,0 +1,25 @@
+# Segredos
+.env
+.env.*
+!.env.example
+*.key
+
+# Saídas locais (histórico de execuções e cache de respostas do LLM)
+outputs/
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
