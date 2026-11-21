@@ -139,7 +139,8 @@ class GeminiClient:
         if isinstance(exc, errors.APIError):
             code = exc.code
             message = (exc.message or str(exc))[:300]
-            if code in (401, 403):
+            # O Gemini responde 400 (e não 401) para chave inválida.
+            if code in (401, 403) or "api key" in message.lower():
                 error: LLMError = LLMAuthError(f"Chave do Gemini inválida ou sem permissão ({code}): {message}")
             elif code == 429:
                 error = LLMRateLimitError(f"Limite de requisições do Gemini atingido (429): {message}")
