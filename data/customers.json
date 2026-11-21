@@ -1,0 +1,42 @@
+[
+  {
+    "id": "marta-leigo-telefone",
+    "name": "Marta Souza",
+    "technical_level": "leigo",
+    "communication_style": "didático",
+    "channel": "telefone",
+    "context": "Aposentada, usa o computador e o celular para e-mail, banco e videochamadas com a família. Fica insegura quando vê termos técnicos."
+  },
+  {
+    "id": "rafael-avancado-chat",
+    "name": "Rafael Lima",
+    "technical_level": "avançado",
+    "communication_style": "direto",
+    "channel": "chat",
+    "context": "Desenvolvedor backend em uma startup. Integra sistemas via API e prefere respostas curtas com comandos e códigos de erro."
+  },
+  {
+    "id": "carla-intermediario-email",
+    "name": "Carla Mendes",
+    "technical_level": "intermediário",
+    "communication_style": "detalhado",
+    "channel": "e-mail",
+    "context": "Analista financeira. Usa planilhas e sistemas web com frequência, sabe instalar programas e limpar cache, mas não mexe em configuração de rede."
+  },
+  {
+    "id": "joao-leigo-chat",
+    "name": "João Pereira",
+    "technical_level": "leigo",
+    "communication_style": "direto",
+    "channel": "chat",
+    "context": "Dono de uma pequena loja. Está sempre com pressa e quer só o que precisa fazer, sem explicação longa."
+  },
+  {
+    "id": "bruna-avancado-email",
+    "name": "Bruna Costa",
+    "technical_level": "avançado",
+    "communication_style": "didático",
+    "channel": "e-mail",
+    "context": "Coordenadora de TI que repassa as orientações para a equipe interna. Quer entender o porquê de cada passo para conseguir explicar aos outros."
+  }
+]

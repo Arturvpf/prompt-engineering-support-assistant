@@ -1,0 +1,30 @@
+[
+  {
+    "id": "T001",
+    "title": "Internet caindo à noite",
+    "product": "Internet residencial fibra 300 Mb",
+    "description": "Toda noite, mais ou menos depois das 20h, a internet fica muito lenta e às vezes cai de vez. Durante o dia funciona normal. Já desliguei e liguei o aparelho da internet mas não adiantou. As videochamadas com meus netos ficam travando.",
+    "missing_on_purpose": ["se a queda é no Wi-Fi ou também no cabo", "quantos aparelhos ficam conectados à noite", "se alguma luz do roteador muda de cor", "distância entre o roteador e o computador"]
+  },
+  {
+    "id": "T002",
+    "title": "Webhook de pagamento falhando de forma intermitente",
+    "product": "API de pagamentos - plano Business",
+    "description": "Desde ontem cerca de 30% dos webhooks de 'payment.approved' não estão chegando no nosso endpoint. No painel aparece status 'failed' com 'timeout'. Nosso endpoint responde em ~200ms nos testes locais. Não mudamos nada no deploy, pelo que eu saiba.",
+    "missing_on_purpose": ["exemplo de ID de evento com falha", "região/host do endpoint", "se há WAF, firewall ou rate limit na frente do endpoint", "horário exato do início das falhas"]
+  },
+  {
+    "id": "T003",
+    "title": "Relatório exportado em CSV com acentos quebrados",
+    "product": "Sistema de gestão financeira (web)",
+    "description": "Quando exporto o relatório mensal de despesas em CSV e abro no Excel, todos os acentos aparecem errados, por exemplo 'DescriÃ§Ã£o' em vez de 'Descrição'. No mês passado funcionava. Preciso enviar esse relatório para a diretoria até sexta.",
+    "missing_on_purpose": ["versão do Excel e sistema operacional", "se abre direto com duplo clique ou usa Importar dados", "se outros relatórios têm o mesmo problema"]
+  },
+  {
+    "id": "T004",
+    "title": "Não consigo entrar no aplicativo depois de trocar de celular",
+    "product": "Aplicativo de vendas da loja (Android e iOS)",
+    "description": "Comprei um celular novo e instalei o app, mas quando coloco minha senha diz que não foi possível entrar. No celular antigo eu entrava normal. Preciso registrar as vendas hoje.",
+    "missing_on_purpose": ["mensagem de erro exata", "se usa autenticação em dois fatores e onde recebe o código", "sistema do celular novo", "se o celular antigo ainda está com ele"]
+  }
+]
