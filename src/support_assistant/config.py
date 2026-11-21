@@ -26,7 +26,6 @@ class Settings:
     timeout_seconds: float
     max_retries: int
     output_dir: Path
-    cache_dir: Path
     provider: str = "gemini"
 
     def generation_params(self) -> dict:
@@ -82,7 +81,6 @@ def load_settings(require_api_key: bool = True, env_file: Path | None = None) ->
         timeout_seconds=_number("LLM_TIMEOUT_SECONDS", 60, float, 1, 600),
         max_retries=_number("LLM_MAX_RETRIES", 3, int, 0, 10),
         output_dir=_path("OUTPUT_DIR", "outputs"),
-        cache_dir=_path("CACHE_DIR", ".cache"),
     )
 
 
