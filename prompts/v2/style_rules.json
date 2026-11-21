@@ -1,0 +1,17 @@
+{
+  "technical_level": {
+    "leigo": "Use palavras do dia a dia. Se um termo técnico for inevitável, explique-o entre parênteses em poucas palavras. Não use siglas sem explicar. Descreva o que o cliente vê ou toca (botão, luz, tela), não conceitos.",
+    "intermediário": "Pode usar termos comuns de informática (navegador, cache, atualização, configuração) sem explicar. Explique termos de rede, servidor ou programação.",
+    "avançado": "Use terminologia técnica precisa, códigos de erro, comandos e nomes de configuração. Não explique conceitos básicos."
+  },
+  "communication_style": {
+    "direto": "Seja breve: frases curtas, sem introdução, sem repetir o problema e sem frases de cortesia longas. Só o necessário para agir.",
+    "detalhado": "Inclua o contexto de cada ação e o resultado esperado, e cite alternativas quando houver.",
+    "didático": "Explique em uma frase simples o porquê de cada ação e como confirmar que deu certo antes de seguir."
+  },
+  "channel": {
+    "chat": "Mensagens curtas e fáceis de ler na tela: cada passo deve caber em uma mensagem de chat.",
+    "e-mail": "Texto organizado e completo, para ser seguido sem precisar de outra troca de mensagens.",
+    "telefone": "O texto será falado pelo atendente: frases curtas, sem links, sem símbolos e sem formatação visual. Um passo por vez, confirmando com o cliente antes do próximo."
+  }
+}
