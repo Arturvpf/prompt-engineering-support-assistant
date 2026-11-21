@@ -50,7 +50,7 @@ class Settings:
 
 # provedor -> (variável da chave, variável do modelo, modelo padrão, onde obter a chave)
 PROVIDERS = {
-    "openrouter": ("OPENROUTER_API_KEY", "OPENROUTER_MODEL", "google/gemma-4-31b-it:free",
+    "openrouter": ("OPENROUTER_API_KEY", "OPENROUTER_MODEL", "nvidia/nemotron-3.5-super-vl:free",
                    "https://openrouter.ai/keys"),
     "gemini": ("GEMINI_API_KEY", "GEMINI_MODEL", "gemini-2.5-flash",
                "https://aistudio.google.com/apikey"),
