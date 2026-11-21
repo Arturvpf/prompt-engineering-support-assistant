@@ -1,0 +1,15 @@
+{
+  "version": "v2",
+  "created_at": "2026-11-21",
+  "description": "Perfil traduzido em regras concretas de escrita, persona com limites explícitos, ticket delimitado como dado e tarefas com decomposição, limites de tamanho e critérios de qualidade.",
+  "changes_from_previous": [
+    "Persona dividida em papel, responsabilidades e limites (sem pedir senha/código, sem prometer prazo, aviso antes de ação arriscada).",
+    "Perfil do cliente convertido em regras observáveis via style_rules.json (vocabulário, tamanho e formato por canal), em vez de só repetir os rótulos.",
+    "Relato do cliente entre <ticket> e </ticket>, tratado como dado e não como instrução.",
+    "Diagnóstico com ordem fixa, 2 a 4 hipóteses distintas, evidências citando o texto do ticket e o que apoia ou contradiz cada hipótese.",
+    "Passo a passo com 3 a 7 ações únicas, começando pelas mais simples e seguras, com resultado esperado em cada passo.",
+    "Perguntas limitadas a 3, sem repetir o que já está no ticket, com motivo e onde o cliente encontra a resposta.",
+    "Fluxograma com tamanho máximo, decisões sim/não e saída explícita para escalonamento."
+  ],
+  "hypothesis": "Rótulos como 'leigo' ou 'telefone' são interpretados de forma vaga. Transformá-los em regras verificáveis e limitar o tamanho de cada saída deve aumentar principalmente a adequação ao nível do cliente e a acionabilidade, sem perder clareza."
+}
