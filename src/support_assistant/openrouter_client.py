@@ -86,6 +86,10 @@ class OpenRouterClient:
             status = (error or {}).get("code") if isinstance(error, dict) else None
             status = status if isinstance(status, int) else response.status_code
             message = (error or {}).get("message") if isinstance(error, dict) else None
+            # "Provider returned error" é genérico; o motivo real vem em metadata.raw.
+            raw = ((error or {}).get("metadata") or {}).get("raw") if isinstance(error, dict) else None
+            if isinstance(raw, str) and raw:
+                message = f"{message}: {raw}" if message else raw
             raise _HTTPStatusError(status, message or response.text[:300])
 
         choices = body.get("choices") or []
