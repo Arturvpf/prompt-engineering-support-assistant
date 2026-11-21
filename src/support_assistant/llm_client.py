@@ -67,26 +67,15 @@ class GeminiClient:
 
     def generate(self, system: str, user: str) -> LLMResponse:
         config = self._build_config(system)
-        attempts = self.settings.max_retries + 1
-        last_error: Exception | None = None
 
-        for attempt in range(1, attempts + 1):
+        def call() -> LLMResponse:
             started = time.perf_counter()
-            try:
-                response = self._client.models.generate_content(
-                    model=self.settings.model, contents=user, config=config
-                )
-                return self._to_response(response, started)
-            except LLMError:
-                raise
-            except Exception as exc:  # noqa: BLE001 - classificado abaixo
-                error = self._classify(exc)
-                if not getattr(error, "retryable", False) or attempt == attempts:
-                    raise error from exc
-                last_error = error
-                time.sleep(self._backoff(attempt))
+            response = self._client.models.generate_content(
+                model=self.settings.model, contents=user, config=config
+            )
+            return self._to_response(response, started)
 
-        raise LLMError(f"Falha após {attempts} tentativas: {last_error}")
+        return call_with_retries(call, self._classify, self.settings.max_retries)
 
     # ---------------------------------------------------------------- internos
 
@@ -159,7 +148,34 @@ class GeminiClient:
 
         return LLMError(f"Erro inesperado ao chamar o Gemini: {type(exc).__name__}: {exc}")
 
-    @staticmethod
-    def _backoff(attempt: int) -> float:
-        """Espera exponencial com jitter: ~1s, 2s, 4s... limitado a 20s."""
-        return min(20.0, 2 ** (attempt - 1)) + random.uniform(0, 0.5)
+
+def call_with_retries(call, classify, max_retries: int) -> LLMResponse:
+    """Executa ``call``; em erro, classifica e tenta de novo só se for temporário."""
+    attempts = max_retries + 1
+    for attempt in range(1, attempts + 1):
+        try:
+            return call()
+        except LLMError:
+            raise  # já classificado (ex.: resposta vazia): não adianta repetir
+        except Exception as exc:  # noqa: BLE001 - classificado abaixo
+            error = classify(exc)
+            if not getattr(error, "retryable", False) or attempt == attempts:
+                raise error from exc
+            time.sleep(_backoff(attempt))
+    raise LLMError("Nenhuma tentativa executada.")  # só se max_retries < 0
+
+
+def _backoff(attempt: int) -> float:
+    """Espera exponencial com jitter: ~1s, 2s, 4s... limitado a 20s."""
+    return min(20.0, 2 ** (attempt - 1)) + random.uniform(0, 0.5)
+
+
+def create_client(settings: Settings) -> LLMClient:
+    """Instancia o cliente do provedor configurado em LLM_PROVIDER."""
+    if settings.provider == "openrouter":
+        from .openrouter_client import OpenRouterClient
+
+        return OpenRouterClient(settings)
+    if settings.provider == "gemini":
+        return GeminiClient(settings)
+    raise LLMError(f"Provedor não suportado: {settings.provider}")
