@@ -1,16 +1,30 @@
 """Parse e validação da saída do modelo.
 
-Erros estruturais (JSON inválido, campo obrigatório ausente ou vazio) fazem a
-geração ser repetida com um pedido de correção. Problemas de forma (fluxograma
-com caracteres não ASCII, por exemplo) viram avisos e não bloqueiam.
+A estrutura de cada tipo de conteúdo é descrita em ``schemas/<tipo>.schema.json``
+(JSON Schema 2020-12). Os schemas aceitam as duas versões de prompt: os campos
+que só a v2 pede são opcionais.
+
+- Erros de estrutura (JSON inválido, campo obrigatório ausente ou vazio, tipo
+  errado, valor fora da lista permitida) fazem a geração ser repetida com um
+  pedido de correção.
+- Problemas de coerência ou de forma (conclusão apontando para uma hipótese que
+  não existe, fluxograma com linhas longas) viram avisos e não bloqueiam.
 """
 
 from __future__ import annotations
 
 import json
 import re
+from functools import lru_cache
+from pathlib import Path
 
+from jsonschema import Draft202012Validator
+
+from .config import PROJECT_ROOT
 from .content_types import get_content_type
+
+SCHEMAS_DIR = PROJECT_ROOT / "schemas"
+MAX_REPORTED_ERRORS = 5
 
 
 class OutputValidationError(ValueError):
@@ -39,41 +53,95 @@ def parse_json_output(text: str) -> dict:
 
 
 def validate_output(content_type: str, data: dict) -> list[str]:
-    """Valida os campos obrigatórios. Lança erro se faltar algo; retorna avisos não bloqueantes."""
-    ct = get_content_type(content_type)
-    problems = [f"campo '{name}' ausente ou vazio" for name in ct.required_fields if _is_empty(data.get(name))]
-    problems += _CHECKS[content_type](data)
-    if problems:
-        raise OutputValidationError("; ".join(problems))
+    """Valida contra o schema do tipo. Lança erro se a estrutura estiver errada; retorna avisos."""
+    get_content_type(content_type)  # tipo desconhecido gera erro claro
+    errors = sorted(validator(content_type).iter_errors(data), key=lambda e: list(e.absolute_path))
+    if errors:
+        unique = list(dict.fromkeys(_describe(e) for e in errors))  # "" falha em minLength e pattern
+        messages = unique[:MAX_REPORTED_ERRORS]
+        if len(unique) > MAX_REPORTED_ERRORS:
+            messages.append(f"e mais {len(unique) - MAX_REPORTED_ERRORS} problema(s)")
+        raise OutputValidationError("; ".join(messages))
     return _WARNINGS.get(content_type, lambda _d: [])(data)
 
 
-# ------------------------------------------------------- checagens por tipo
-
-def _check_diagnosis(d: dict) -> list[str]:
-    problems = _list_of_objects(d, "hypotheses", ("id", "description"))
-    problems += _list_of_objects(d, "evidence", ("signal",))
-    problems += _list_of_objects(d, "missing_information", ("item",))
-    conclusion = d.get("probable_conclusion")
-    if conclusion is not None and (not isinstance(conclusion, dict) or _is_empty(conclusion.get("summary"))):
-        problems.append("'probable_conclusion' precisa ser objeto com 'summary'")
-    return problems
-
-
-def _check_steps(d: dict) -> list[str]:
-    return _list_of_objects(d, "steps", ("action",))
+@lru_cache(maxsize=None)
+def load_schema(content_type: str, schemas_dir: Path = SCHEMAS_DIR) -> dict:
+    path = schemas_dir / f"{content_type}.schema.json"
+    try:
+        schema = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise OutputValidationError(f"Schema não encontrado: {path}") from None
+    Draft202012Validator.check_schema(schema)
+    return schema
 
 
-def _check_questions(d: dict) -> list[str]:
-    return _list_of_objects(d, "questions", ("question",))
+@lru_cache(maxsize=None)
+def validator(content_type: str) -> Draft202012Validator:
+    return Draft202012Validator(load_schema(content_type))
 
 
-def _check_flow(d: dict) -> list[str]:
-    problems = []
-    if not _is_empty(d.get("ascii_flowchart")) and not isinstance(d["ascii_flowchart"], str):
-        problems.append("'ascii_flowchart' deve ser texto")
-    problems += _list_of_objects(d, "decision_points", ("question",))
-    return problems
+# --------------------------------------------------- mensagens em português
+
+def _describe(error) -> str:
+    path = _path(error.absolute_path)
+    v = error.validator
+    if v == "required":
+        missing = error.message.split("'")[1] if "'" in error.message else error.message
+        where = f"{path}." if path != "raiz" else ""
+        return f"campo '{where}{missing}' ausente"
+    if v == "type":
+        return f"'{path}' deve ser do tipo {_type_name(error.validator_value)}"
+    if v in ("minLength", "pattern"):
+        return f"'{path}' está vazio"
+    if v == "minItems":
+        return f"'{path}' precisa de pelo menos {error.validator_value} item(ns)"
+    if v == "maxItems":
+        return f"'{path}' tem itens demais (máximo {error.validator_value})"
+    if v == "enum":
+        options = ", ".join(map(str, error.validator_value))
+        return f"'{path}' = {error.instance!r} não é permitido (use: {options})"
+    if v == "minimum":
+        return f"'{path}' deve ser no mínimo {error.validator_value}"
+    return f"'{path}': {error.message}"
+
+
+def _path(parts) -> str:
+    out = ""
+    for p in parts:
+        out += f"[{p + 1}]" if isinstance(p, int) else (f".{p}" if out else str(p))
+    return out or "raiz"
+
+
+def _type_name(t) -> str:
+    names = {"string": "texto", "array": "lista", "object": "objeto", "integer": "inteiro", "number": "número"}
+    if isinstance(t, list):
+        return " ou ".join(names.get(x, x) for x in t)
+    return names.get(t, t)
+
+
+# ------------------------------------------------------- avisos por tipo
+
+def _warn_diagnosis(d: dict) -> list[str]:
+    ids = {h.get("id") for h in d.get("hypotheses", [])}
+    warnings = []
+    referenced = set()
+    for e in d.get("evidence", []):
+        referenced |= set(e.get("supports", [])) | set(e.get("weakens", []))
+    unknown = sorted(referenced - ids)
+    if unknown:
+        warnings.append(f"evidências citam hipóteses que não existem: {', '.join(unknown)}")
+    conclusion_id = (d.get("probable_conclusion") or {}).get("hypothesis_id")
+    if conclusion_id and conclusion_id not in ids:
+        warnings.append(f"a conclusão aponta para a hipótese {conclusion_id}, que não existe")
+    return warnings
+
+
+def _warn_questions(d: dict) -> list[str]:
+    priorities = [q.get("priority") for q in d.get("questions", []) if q.get("priority") is not None]
+    if len(priorities) != len(set(priorities)):
+        return ["perguntas com prioridade repetida"]
+    return []
 
 
 def _warn_flow(d: dict) -> list[str]:
@@ -83,36 +151,14 @@ def _warn_flow(d: dict) -> list[str]:
         warnings.append("fluxograma usa caracteres fora do ASCII (setas ou caixas Unicode)")
     if any(len(line) > 80 for line in chart.splitlines()):
         warnings.append("fluxograma tem linhas com mais de 80 caracteres")
+    for i, p in enumerate(d.get("decision_points", []), start=1):
+        if p.get("if_yes", "").strip().lower() == p.get("if_no", "").strip().lower():
+            warnings.append(f"decisão {i} tem a mesma ação no sim e no não")
     return warnings
 
 
-_CHECKS = {
-    "diagnosis": _check_diagnosis,
-    "resolution_steps": _check_steps,
-    "clarifying_questions": _check_questions,
-    "flow_summary": _check_flow,
+_WARNINGS = {
+    "diagnosis": _warn_diagnosis,
+    "clarifying_questions": _warn_questions,
+    "flow_summary": _warn_flow,
 }
-_WARNINGS = {"flow_summary": _warn_flow}
-
-
-# ------------------------------------------------------------------ helpers
-
-def _is_empty(value) -> bool:
-    return value is None or (isinstance(value, (str, list, dict)) and len(value) == 0) or (
-        isinstance(value, str) and not value.strip()
-    )
-
-
-def _list_of_objects(d: dict, key: str, required: tuple[str, ...]) -> list[str]:
-    value = d.get(key)
-    if _is_empty(value):
-        return []  # já reportado como obrigatório (ou opcional)
-    if not isinstance(value, list):
-        return [f"'{key}' deve ser uma lista"]
-    problems = []
-    for i, item in enumerate(value, start=1):
-        if not isinstance(item, dict):
-            problems.append(f"'{key}[{i}]' deve ser objeto")
-            continue
-        problems += [f"'{key}[{i}].{field}' vazio" for field in required if _is_empty(item.get(field))]
-    return problems
