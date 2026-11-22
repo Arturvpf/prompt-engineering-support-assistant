@@ -9,6 +9,7 @@ from __future__ import annotations
 import textwrap
 
 from .content_types import get_content_type
+from .evaluation import CRITERIA
 
 WIDTH = 88
 
@@ -39,6 +40,46 @@ def render_record(record: dict, history_path) -> str:
             f"| tentativas: {m.get('attempts', 1)}"
         )
     lines.append(f"Salvo em: {history_path}  (run_id {record['run_id']})")
+    if record.get("evaluation"):
+        lines += ["", render_evaluation(record["evaluation"])]
+    return "\n".join(lines)
+
+
+def render_evaluation(ev: dict) -> str:
+    out = [f"AVALIAÇÃO (total {ev['total']}/{5 * len(ev['criteria'])}, média {ev['average']}, por {ev['evaluator']})"]
+    for cid, c in ev["criteria"].items():
+        label = CRITERIA[cid].label if cid in CRITERIA else cid
+        out.append(_item(f"- {label}: {c['score']} ({c['level']}).", c["justification"]))
+    return "\n".join(out)
+
+
+def render_comparison(comp: dict) -> str:
+    s = comp["scenario"]
+    versions = comp["versions"]
+    col = 10
+    lines = [
+        "=" * WIDTH,
+        f"COMPARAÇÃO {' x '.join(versions)}  |  {s['provider']}/{s['model']}",
+        f"Cliente: {s['customer']['name']} ({s['customer_id']})  |  Ticket: {s['ticket_id']}",
+        f"Só muda: {s['only_difference']}  |  temperatura {s['generation_params'].get('temperature')}, "
+        f"seed {s['generation_params'].get('seed')}",
+        "=" * WIDTH,
+    ]
+    for group in comp["by_content_type"]:
+        names = list(group["versions"])
+        lines.append(f"\n{group['content_type']}  (vencedor: {group['winner']})")
+        lines.append(f"  {'critério':<32}" + "".join(f"{n:>{col}}" for n in names) + f"{'Δ':>{col}}")
+        for cid, crit in CRITERIA.items():
+            row = "".join(f"{group['versions'][n]['scores'][cid]:>{col}}" for n in names)
+            lines.append(f"  {crit.label:<32}{row}{group['delta'][cid]:>+{col}}")
+        totals = "".join(f"{group['versions'][n]['total']:>{col}}" for n in names)
+        delta_total = group["versions"][names[-1]]["total"] - group["versions"][names[0]]["total"]
+        lines.append(f"  {'TOTAL':<32}{totals}{delta_total:>+{col}}")
+
+    lines.append("\nTOTAL GERAL: " + ", ".join(f"{v} = {t}" for v, t in comp["overall_totals"].items())
+                 + f"  |  vencedor: {comp['overall_winner']}")
+    if comp.get("verdict"):
+        lines += ["", "POR QUÊ", _wrap(comp["verdict"])]
     return "\n".join(lines)
 
 
