@@ -1,0 +1,893 @@
+[
+  {
+    "run_id": "a2cf94288d19",
+    "timestamp": "2026-11-22T12:52:37-03:00",
+    "customer_id": "joao-leigo-chat",
+    "customer": {
+      "id": "joao-leigo-chat",
+      "name": "João Pereira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "context": "Dono de uma pequena loja. Está sempre com pressa e quer só o que precisa fazer, sem explicação longa."
+    },
+    "ticket_id": "T004",
+    "ticket": {
+      "id": "T004",
+      "title": "Não consigo entrar no aplicativo depois de trocar de celular",
+      "product": "Aplicativo de vendas da loja (Android e iOS)",
+      "description": "Comprei um celular novo e instalei o app, mas quando coloco minha senha diz que não foi possível entrar. No celular antigo eu entrava normal. Preciso registrar as vendas hoje."
+    },
+    "content_type": "diagnosis",
+    "prompt_version": "v1",
+    "prompt_fingerprint": "bba3294fa4514f446214c55a6b3302bedb36d4371be4a3f985893e84dbfc86e2",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "04bb7b44542096b5c63027e70143682ce6ec4a1e725baf64b84e0040d0f7758b",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "hypotheses": [
+        {
+          "id": "H1",
+          "description": "Credenciais de acesso incorretas (senha digitada errada ou com erro de digitação no novo dispositivo).",
+          "likelihood": "alta"
+        },
+        {
+          "id": "H2",
+          "description": "Conta bloqueada ou desativada por múltiplas tentativas de login falhas no novo aparelho.",
+          "likelihood": "média"
+        },
+        {
+          "id": "H3",
+          "description": "Incompatibilidade de versão do aplicativo com o sistema operacional do novo celular.",
+          "likelihood": "baixa"
+        }
+      ],
+      "evidence": [
+        {
+          "signal": "Cliente acessava normalmente no celular antigo",
+          "supports": [
+            "H1",
+            "H2"
+          ]
+        },
+        {
+          "signal": "Mensagem de erro ao inserir senha no novo celular",
+          "supports": [
+            "H1",
+            "H2"
+          ]
+        },
+        {
+          "signal": "App foi instalado no novo dispositivo",
+          "supports": [
+            "H1",
+            "H3"
+          ]
+        }
+      ],
+      "missing_information": [
+        {
+          "item": "Mensagem exata de erro exibida na tela",
+          "why_it_matters": "Ajuda a diferenciar entre senha incorreta e conta bloqueada"
+        },
+        {
+          "item": "E-mail ou CPF cadastrado na conta",
+          "why_it_matters": "Necessário para verificar o status da conta e redefinir senha se preciso"
+        },
+        {
+          "item": "Versão do Android/iOS do novo celular",
+          "why_it_matters": "Descarta problema de compatibilidade do app"
+        }
+      ],
+      "probable_conclusion": {
+        "hypothesis_id": "H1",
+        "summary": "O cliente provavelmente está digitando a senha incorretamente no novo aparelho ou precisa redefinir a senha via 'Esqueci minha senha'.",
+        "confidence": "alta"
+      }
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 4211,
+      "usage": {
+        "prompt_tokens": 353,
+        "output_tokens": 394,
+        "total_tokens": 747
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": {
+      "rubric": [
+        "clarity",
+        "customer_fit",
+        "actionability"
+      ],
+      "scale": "1 a 5",
+      "criteria": {
+        "clarity": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Hipóteses, evidências e lacunas bem separadas e fáceis de ler, mas as evidências parafraseiam o ticket em vez de citá-lo."
+        },
+        "customer_fit": {
+          "score": 3,
+          "level": "adequado",
+          "justification": "Serve ao atendente, mas pede 'e-mail ou CPF' sem cuidado com dado pessoal e não considera que o cliente é leigo ao propor como confirmar."
+        },
+        "actionability": {
+          "score": 3,
+          "level": "adequado",
+          "justification": "Conclui 'senha errada' com confiança alta sem evidência para isso e não diz como confirmar; o atendente fica sem próximo passo verificável."
+        }
+      },
+      "total": 10,
+      "average": 3.33,
+      "evaluator": "manual",
+      "evaluated_at": "2026-11-22T12:53:57-03:00"
+    }
+  },
+  {
+    "run_id": "524bbca9b910",
+    "timestamp": "2026-11-22T12:52:43-03:00",
+    "customer_id": "joao-leigo-chat",
+    "customer": {
+      "id": "joao-leigo-chat",
+      "name": "João Pereira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "context": "Dono de uma pequena loja. Está sempre com pressa e quer só o que precisa fazer, sem explicação longa."
+    },
+    "ticket_id": "T004",
+    "ticket": {
+      "id": "T004",
+      "title": "Não consigo entrar no aplicativo depois de trocar de celular",
+      "product": "Aplicativo de vendas da loja (Android e iOS)",
+      "description": "Comprei um celular novo e instalei o app, mas quando coloco minha senha diz que não foi possível entrar. No celular antigo eu entrava normal. Preciso registrar as vendas hoje."
+    },
+    "content_type": "diagnosis",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "4d6a7825c30d3b625e767884d97ee384b542873455efbfdfc9bdf1544dfcfb06",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "067e948512ce05be432096dfa690ad888808cb6c11ffb52fe379b413efb756ca",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "hypotheses": [
+        {
+          "id": "H1",
+          "description": "Senha digitada incorretamente no novo celular",
+          "likelihood": "alta"
+        },
+        {
+          "id": "H2",
+          "description": "Conta bloqueada ou desativada após troca de dispositivo",
+          "likelihood": "média"
+        },
+        {
+          "id": "H3",
+          "description": "Versão do app incompatível com o novo celular",
+          "likelihood": "baixa"
+        }
+      ],
+      "evidence": [
+        {
+          "signal": "Comprei um celular novo e instalei o app",
+          "supports": [
+            "H1",
+            "H2",
+            "H3"
+          ],
+          "weakens": []
+        },
+        {
+          "signal": "quando coloco minha senha diz que não foi possível entrar",
+          "supports": [
+            "H1",
+            "H2"
+          ],
+          "weakens": [
+            "H3"
+          ]
+        },
+        {
+          "signal": "No celular antigo eu entrava normal",
+          "supports": [
+            "H1",
+            "H2"
+          ],
+          "weakens": [
+            "H3"
+          ]
+        }
+      ],
+      "missing_information": [
+        {
+          "item": "Mensagem exata de erro exibida na tela",
+          "why_it_matters": "Diferencia senha errada de conta bloqueada"
+        },
+        {
+          "item": "Se o cliente tentou redefinir a senha",
+          "why_it_matters": "Confirma se o problema é de acesso ou de conta"
+        }
+      ],
+      "probable_conclusion": {
+        "hypothesis_id": "H1",
+        "summary": "O problema mais provável é a senha digitada incorretamente no novo celular.",
+        "confidence": "média",
+        "how_to_confirm": "Tentar redefinir a senha pelo app e entrar novamente"
+      }
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 2374,
+      "usage": {
+        "prompt_tokens": 939,
+        "output_tokens": 358,
+        "total_tokens": 1297
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": {
+      "rubric": [
+        "clarity",
+        "customer_fit",
+        "actionability"
+      ],
+      "scale": "1 a 5",
+      "criteria": {
+        "clarity": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Curto e objetivo, com evidências citando o texto do ticket e marcando o que apoia ou enfraquece; um vínculo (celular antigo enfraquece H3) é discutível."
+        },
+        "customer_fit": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Hipóteses descritas em linguagem simples e lacunas que um cliente leigo consegue responder, sem pedir dados sensíveis."
+        },
+        "actionability": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Confiança calibrada (média) e um 'como confirmar' concreto; ainda não levanta verificação de novo aparelho ou código de confirmação."
+        }
+      },
+      "total": 12,
+      "average": 4.0,
+      "evaluator": "manual",
+      "evaluated_at": "2026-11-22T12:53:57-03:00"
+    }
+  },
+  {
+    "run_id": "39d4ea594be4",
+    "timestamp": "2026-11-22T12:52:39-03:00",
+    "customer_id": "joao-leigo-chat",
+    "customer": {
+      "id": "joao-leigo-chat",
+      "name": "João Pereira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "context": "Dono de uma pequena loja. Está sempre com pressa e quer só o que precisa fazer, sem explicação longa."
+    },
+    "ticket_id": "T004",
+    "ticket": {
+      "id": "T004",
+      "title": "Não consigo entrar no aplicativo depois de trocar de celular",
+      "product": "Aplicativo de vendas da loja (Android e iOS)",
+      "description": "Comprei um celular novo e instalei o app, mas quando coloco minha senha diz que não foi possível entrar. No celular antigo eu entrava normal. Preciso registrar as vendas hoje."
+    },
+    "content_type": "resolution_steps",
+    "prompt_version": "v1",
+    "prompt_fingerprint": "09105df1bbcea593f5c7ba485d13ad2d21abba8f847fb128e3764678977fa093",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "fdcbdb3e227b0852034e88cbee941f9e5b583fd09edc85a770fbd90e164fda3e",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "steps": [
+        {
+          "number": 1,
+          "action": "Verifique se você está digitando o e-mail e a senha corretamente, sem espaços extras.",
+          "expected_result": "Acesso ao aplicativo."
+        },
+        {
+          "number": 2,
+          "action": "Se continuar com erro, clique em 'Esqueci minha senha' na tela de login e siga as instruções para redefini-la.",
+          "expected_result": "Nova senha definida e acesso ao aplicativo."
+        },
+        {
+          "number": 3,
+          "action": "Certifique-se de que o aplicativo está atualizado na loja de apps (Google Play Store ou App Store).",
+          "expected_result": "Aplicativo na versão mais recente e funcionando."
+        }
+      ],
+      "if_not_resolved": "Entre em contato com o suporte técnico informando o número do ticket T004 para análise detalhada da conta."
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 1543,
+      "usage": {
+        "prompt_tokens": 289,
+        "output_tokens": 195,
+        "total_tokens": 484
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": {
+      "rubric": [
+        "clarity",
+        "customer_fit",
+        "actionability"
+      ],
+      "scale": "1 a 5",
+      "criteria": {
+        "clarity": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Três passos curtos e em ordem lógica, cada um com resultado esperado."
+        },
+        "customer_fit": {
+          "score": 3,
+          "level": "adequado",
+          "justification": "É direto como o perfil pede, mas fala em 'clicar' no celular, não tem abertura e não ajuda um leigo a achar as opções."
+        },
+        "actionability": {
+          "score": 3,
+          "level": "adequado",
+          "justification": "Os passos são executáveis, mas o 'se não resolver' só manda procurar o suporte, sem dizer o que informar."
+        }
+      },
+      "total": 10,
+      "average": 3.33,
+      "evaluator": "manual",
+      "evaluated_at": "2026-11-22T12:53:58-03:00"
+    }
+  },
+  {
+    "run_id": "9c2cf899bd60",
+    "timestamp": "2026-11-22T12:52:47-03:00",
+    "customer_id": "joao-leigo-chat",
+    "customer": {
+      "id": "joao-leigo-chat",
+      "name": "João Pereira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "context": "Dono de uma pequena loja. Está sempre com pressa e quer só o que precisa fazer, sem explicação longa."
+    },
+    "ticket_id": "T004",
+    "ticket": {
+      "id": "T004",
+      "title": "Não consigo entrar no aplicativo depois de trocar de celular",
+      "product": "Aplicativo de vendas da loja (Android e iOS)",
+      "description": "Comprei um celular novo e instalei o app, mas quando coloco minha senha diz que não foi possível entrar. No celular antigo eu entrava normal. Preciso registrar as vendas hoje."
+    },
+    "content_type": "resolution_steps",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "173a4ba59809aae08aa89d6cdef7bc82e6c18f9a667a2373563e01b516cb81fb",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "49ce9d95464dac33bda70ca857ec2a4b1d4a29e1fab45a0d18b0c4f0b229b296",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "opening": "Olá, João. Vamos tentar entrar no app no celular novo.",
+      "steps": [
+        {
+          "number": 1,
+          "action": "Desligue o celular e ligue novamente.",
+          "why": "",
+          "expected_result": "O celular reinicia e volta à tela inicial."
+        },
+        {
+          "number": 2,
+          "action": "Abra a loja de apps (Google Play no Android ou App Store no iPhone) e verifique se há atualização para o app de vendas.",
+          "why": "",
+          "expected_result": "O app está na versão mais recente ou não há atualização disponível."
+        },
+        {
+          "number": 3,
+          "action": "Digite sua senha novamente, com cuidado para não errar letras maiúsculas ou minúsculas.",
+          "why": "",
+          "expected_result": "O app aceita a senha e abre a tela inicial."
+        },
+        {
+          "number": 4,
+          "action": "Se não lembrar a senha, toque em \"Esqueci minha senha\" na tela de login.",
+          "why": "",
+          "expected_result": "O app envia instruções para redefinir a senha."
+        },
+        {
+          "number": 5,
+          "action": "Desinstale o app e instale novamente pela loja de apps do seu celular.",
+          "why": "",
+          "expected_result": "O app é instalado do zero e você pode tentar entrar novamente."
+        }
+      ],
+      "if_not_resolved": "Entre em contato pelo chat e informe: modelo do celular, versão do app e a mensagem de erro exata que aparece ao tentar entrar."
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 4193,
+      "usage": {
+        "prompt_tokens": 820,
+        "output_tokens": 332,
+        "total_tokens": 1152
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": {
+      "rubric": [
+        "clarity",
+        "customer_fit",
+        "actionability"
+      ],
+      "scale": "1 a 5",
+      "criteria": {
+        "clarity": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Passos numerados com resultado esperado; a ordem poderia ser melhor (reiniciar o celular vem antes de revisar a senha)."
+        },
+        "customer_fit": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Linguagem simples, 'toque', explica onde fica a loja no Android e no iPhone e não traz explicações longas, como pede o estilo direto."
+        },
+        "actionability": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Cada passo diz o que deve acontecer e o encaminhamento lista o que mandar (modelo, versão do app, mensagem de erro); inclui um passo de pouco valor."
+        }
+      },
+      "total": 12,
+      "average": 4.0,
+      "evaluator": "manual",
+      "evaluated_at": "2026-11-22T12:53:58-03:00"
+    }
+  },
+  {
+    "run_id": "ca699d54d804",
+    "timestamp": "2026-11-21T13:33:21-03:00",
+    "customer_id": "joao-leigo-chat",
+    "customer": {
+      "id": "joao-leigo-chat",
+      "name": "João Pereira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "context": "Dono de uma pequena loja. Está sempre com pressa e quer só o que precisa fazer, sem explicação longa."
+    },
+    "ticket_id": "T004",
+    "ticket": {
+      "id": "T004",
+      "title": "Não consigo entrar no aplicativo depois de trocar de celular",
+      "product": "Aplicativo de vendas da loja (Android e iOS)",
+      "description": "Comprei um celular novo e instalei o app, mas quando coloco minha senha diz que não foi possível entrar. No celular antigo eu entrava normal. Preciso registrar as vendas hoje."
+    },
+    "content_type": "clarifying_questions",
+    "prompt_version": "v1",
+    "prompt_fingerprint": "b990b5e9a870b845d4c0ccdd695239b285489e3d8e94bdf9ba625fd3759d0367",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "80977f1249ad43dbacd4510fec1ef106f096d4c67035a7297ea285bee9075a3f",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "questions": [
+        {
+          "priority": 1,
+          "question": "Você está digitando o e-mail e a senha exatamente como no celular antigo?",
+          "reason": "Verificar se há erro de digitação ou uso de credenciais incorretas."
+        },
+        {
+          "priority": 2,
+          "question": "Você recebeu alguma mensagem de erro específica além de 'não foi possível entrar'?",
+          "reason": "Identificar se o problema é de senha, conta bloqueada ou falha de servidor."
+        },
+        {
+          "priority": 3,
+          "question": "Você tentou usar a opção 'Esqueci minha senha' para redefinir o acesso?",
+          "reason": "Solução rápida para recuperar o acesso caso a senha não esteja funcionando no novo dispositivo."
+        }
+      ]
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 2120,
+      "usage": {
+        "prompt_tokens": 269,
+        "output_tokens": 164,
+        "total_tokens": 433
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": {
+      "rubric": [
+        "clarity",
+        "customer_fit",
+        "actionability"
+      ],
+      "scale": "1 a 5",
+      "criteria": {
+        "clarity": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Três perguntas diretas, cada uma com motivo."
+        },
+        "customer_fit": {
+          "score": 3,
+          "level": "adequado",
+          "justification": "Vocabulário simples, mas não diz ao cliente leigo onde encontrar a informação pedida."
+        },
+        "actionability": {
+          "score": 3,
+          "level": "adequado",
+          "justification": "A terceira é uma sugestão disfarçada de pergunta e nenhuma ajuda a separar senha errada de bloqueio ou verificação do aparelho."
+        }
+      },
+      "total": 10,
+      "average": 3.33,
+      "evaluator": "manual",
+      "evaluated_at": "2026-11-22T12:53:58-03:00"
+    }
+  },
+  {
+    "run_id": "62960c793a80",
+    "timestamp": "2026-11-21T13:33:31-03:00",
+    "customer_id": "joao-leigo-chat",
+    "customer": {
+      "id": "joao-leigo-chat",
+      "name": "João Pereira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "context": "Dono de uma pequena loja. Está sempre com pressa e quer só o que precisa fazer, sem explicação longa."
+    },
+    "ticket_id": "T004",
+    "ticket": {
+      "id": "T004",
+      "title": "Não consigo entrar no aplicativo depois de trocar de celular",
+      "product": "Aplicativo de vendas da loja (Android e iOS)",
+      "description": "Comprei um celular novo e instalei o app, mas quando coloco minha senha diz que não foi possível entrar. No celular antigo eu entrava normal. Preciso registrar as vendas hoje."
+    },
+    "content_type": "clarifying_questions",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "0d82fff13132aaf91497515bee6fd296236a6c8f315dd86de16f96e217079831",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "a8e306592db2997f606ec586c3803ceb84134cd76a29e5eba043d565f20f5cfd",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "questions": [
+        {
+          "priority": 1,
+          "question": "Você está usando o mesmo login (e-mail ou usuário) do celular antigo?",
+          "reason": "Confirma se o acesso está sendo feito com a conta correta.",
+          "how_to_find": "No campo de login do aplicativo, onde você digita para entrar."
+        },
+        {
+          "priority": 2,
+          "question": "Você recebeu algum aviso de erro além de 'não foi possível entrar'?",
+          "reason": "Ajuda a saber se o problema é de senha, internet ou conta bloqueada.",
+          "how_to_find": "Na mensagem que aparece na tela do celular após tentar entrar."
+        },
+        {
+          "priority": 3,
+          "question": "O celular novo está conectado à internet?",
+          "reason": "Sem internet o aplicativo não consegue validar a entrada.",
+          "how_to_find": "No ícone de Wi-Fi ou sinal de operadora no topo da tela do celular."
+        }
+      ]
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 10720,
+      "usage": {
+        "prompt_tokens": 768,
+        "output_tokens": 199,
+        "total_tokens": 967
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": {
+      "rubric": [
+        "clarity",
+        "customer_fit",
+        "actionability"
+      ],
+      "scale": "1 a 5",
+      "criteria": {
+        "clarity": {
+          "score": 5,
+          "level": "excelente",
+          "justification": "Cada pergunta trata de uma coisa só, sem ambiguidade, com motivo e onde encontrar."
+        },
+        "customer_fit": {
+          "score": 5,
+          "level": "excelente",
+          "justification": "O 'onde encontrar' guia um cliente leigo passo a passo e as perguntas são curtas, adequadas ao chat e ao estilo direto; nada pede senha ou código."
+        },
+        "actionability": {
+          "score": 4,
+          "level": "bom",
+          "justification": "As respostas permitem ao atendente decidir o próximo passo; a pergunta sobre internet rende pouco e falta perguntar sobre código de verificação."
+        }
+      },
+      "total": 14,
+      "average": 4.67,
+      "evaluator": "manual",
+      "evaluated_at": "2026-11-22T12:53:58-03:00"
+    }
+  },
+  {
+    "run_id": "1e5783f19ae3",
+    "timestamp": "2026-11-22T12:52:40-03:00",
+    "customer_id": "joao-leigo-chat",
+    "customer": {
+      "id": "joao-leigo-chat",
+      "name": "João Pereira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "context": "Dono de uma pequena loja. Está sempre com pressa e quer só o que precisa fazer, sem explicação longa."
+    },
+    "ticket_id": "T004",
+    "ticket": {
+      "id": "T004",
+      "title": "Não consigo entrar no aplicativo depois de trocar de celular",
+      "product": "Aplicativo de vendas da loja (Android e iOS)",
+      "description": "Comprei um celular novo e instalei o app, mas quando coloco minha senha diz que não foi possível entrar. No celular antigo eu entrava normal. Preciso registrar as vendas hoje."
+    },
+    "content_type": "flow_summary",
+    "prompt_version": "v1",
+    "prompt_fingerprint": "7a13bd8786747e1e470096050826140f2cdd22badc20320abb29594b8933ebb0",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "274c37762ca4dfdb229b8ffdc667ec21015b7c1099a70ff0c0672732ef309d78",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "ascii_flowchart": "[Início] -> [Verificar se o app está atualizado] -> [Tentar redefinir senha] -> [Confirmar se o login foi realizado] -> [Fim: Cliente consegue registrar vendas]",
+      "decision_points": [
+        {
+          "question": "O aplicativo está na versão mais recente?",
+          "if_yes": "Prosseguir para redefinição de senha",
+          "if_no": "Orientar o cliente a atualizar o aplicativo na loja de apps"
+        },
+        {
+          "question": "O cliente conseguiu acessar o aplicativo após redefinir a senha?",
+          "if_yes": "Encerrar atendimento",
+          "if_no": "Encaminhar para suporte técnico de nível 2"
+        }
+      ]
+    },
+    "warnings": [
+      "fluxograma tem linhas com mais de 80 caracteres"
+    ],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 1691,
+      "usage": {
+        "prompt_tokens": 287,
+        "output_tokens": 163,
+        "total_tokens": 450
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": {
+      "rubric": [
+        "clarity",
+        "customer_fit",
+        "actionability"
+      ],
+      "scale": "1 a 5",
+      "criteria": {
+        "clarity": {
+          "score": 2,
+          "level": "fraco",
+          "justification": "O fluxo é uma única linha de mais de 150 caracteres, sem ramificações, e quebra em qualquer terminal estreito."
+        },
+        "customer_fit": {
+          "score": 3,
+          "level": "adequado",
+          "justification": "Termos simples, mas o fluxo não reflete o perfil (não começa pelo que o cliente leigo consegue verificar)."
+        },
+        "actionability": {
+          "score": 3,
+          "level": "adequado",
+          "justification": "Os dois pontos de decisão dizem o que fazer em cada caso e indicam N2, mas não há critério de escalonamento nem o que anexar."
+        }
+      },
+      "total": 8,
+      "average": 2.67,
+      "evaluator": "manual",
+      "evaluated_at": "2026-11-22T12:53:59-03:00"
+    }
+  },
+  {
+    "run_id": "a050cc3c5fa8",
+    "timestamp": "2026-11-22T12:52:53-03:00",
+    "customer_id": "joao-leigo-chat",
+    "customer": {
+      "id": "joao-leigo-chat",
+      "name": "João Pereira",
+      "technical_level": "leigo",
+      "communication_style": "direto",
+      "channel": "chat",
+      "context": "Dono de uma pequena loja. Está sempre com pressa e quer só o que precisa fazer, sem explicação longa."
+    },
+    "ticket_id": "T004",
+    "ticket": {
+      "id": "T004",
+      "title": "Não consigo entrar no aplicativo depois de trocar de celular",
+      "product": "Aplicativo de vendas da loja (Android e iOS)",
+      "description": "Comprei um celular novo e instalei o app, mas quando coloco minha senha diz que não foi possível entrar. No celular antigo eu entrava normal. Preciso registrar as vendas hoje."
+    },
+    "content_type": "flow_summary",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "93cc10fb8dd2cc770511d627f7c0b6b9669f320f618dedf9bc974aabae166e21",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "adf5d998d0a538d6b2237febd5480b21f22e259ae27ba50a91dcab293f61406b",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "ascii_flowchart": "+------------------+\n| Nao entra no app |\n+------------------+\n         v\n+------------------+\n| Conectou internet? |\n+------------------+\n         v\n+------------------+\n| Senha correta?   |\n+------------------+\n         v\n+------------------+\n| Redefiniu senha? |\n+------------------+\n         v\n+------------------+\n| Entrou no app?   |\n+------------------+\n         v\n+------------------+\n|     RESOLVIDO    |\n+------------------+\n         v\n+------------------+\n| ESCALAR PARA N2  |\n+------------------+",
+      "decision_points": [
+        {
+          "question": "O celular tem internet?",
+          "if_yes": "Verifique se a senha esta correta.",
+          "if_no": "Peça para ligar o Wi-Fi ou os dados móveis e tentar entrar novamente."
+        },
+        {
+          "question": "A senha esta correta?",
+          "if_yes": "Tente redefinir a senha pelo app.",
+          "if_no": "Oriente a digitar a senha novamente, com atenção a letras maiusculas e minusculas."
+        },
+        {
+          "question": "Redefiniu a senha com sucesso?",
+          "if_yes": "Entre com a nova senha e confirme o acesso.",
+          "if_no": "Escalate para N2."
+        },
+        {
+          "question": "Conseguiu entrar no app?",
+          "if_yes": "RESOLVIDO. Pode registrar as vendas.",
+          "if_no": "ESCALAR PARA N2."
+        }
+      ],
+      "escalation": {
+        "when": "Quando o cliente nao conseguir entrar apos verificar internet, senha correta e redefinicao de senha.",
+        "attach": [
+          "Relato do ticket T004",
+          "Modelo do celular novo",
+          "Versao do aplicativo instalada",
+          "Print da tela de erro, se possivel"
+        ]
+      }
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 2,
+      "latency_ms": 3138,
+      "usage": {
+        "prompt_tokens": 878,
+        "output_tokens": 435,
+        "total_tokens": 1313
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": {
+      "rubric": [
+        "clarity",
+        "customer_fit",
+        "actionability"
+      ],
+      "scale": "1 a 5",
+      "criteria": {
+        "clarity": {
+          "score": 3,
+          "level": "adequado",
+          "justification": "Caixas verticais legíveis, mas uma caixa está desalinhada, as decisões não aparecem como ramos no desenho e há um 'Escalate' em inglês."
+        },
+        "customer_fit": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Começa pelo que um leigo verifica (internet, senha) antes de redefinir e escalar."
+        },
+        "actionability": {
+          "score": 4,
+          "level": "bom",
+          "justification": "Quatro decisões com sim/não e um bloco de escalonamento com quando escalar e o que anexar; precisou de uma tentativa de correção do JSON."
+        }
+      },
+      "total": 11,
+      "average": 3.67,
+      "evaluator": "manual",
+      "evaluated_at": "2026-11-22T12:53:59-03:00"
+    }
+  }
+]

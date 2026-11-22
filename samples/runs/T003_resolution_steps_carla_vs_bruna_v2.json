@@ -1,0 +1,160 @@
+[
+  {
+    "run_id": "43e0f23cc486",
+    "timestamp": "2026-11-22T13:00:45-03:00",
+    "customer_id": "carla-intermediario-email",
+    "customer": {
+      "id": "carla-intermediario-email",
+      "name": "Carla Mendes",
+      "technical_level": "intermediário",
+      "communication_style": "detalhado",
+      "channel": "e-mail",
+      "context": "Analista financeira. Usa planilhas e sistemas web com frequência, sabe instalar programas e limpar cache, mas não mexe em configuração de rede."
+    },
+    "ticket_id": "T003",
+    "ticket": {
+      "id": "T003",
+      "title": "Relatório exportado em CSV com acentos quebrados",
+      "product": "Sistema de gestão financeira (web)",
+      "description": "Quando exporto o relatório mensal de despesas em CSV e abro no Excel, todos os acentos aparecem errados, por exemplo 'DescriÃ§Ã£o' em vez de 'Descrição'. No mês passado funcionava. Preciso enviar esse relatório para a diretoria até sexta."
+    },
+    "content_type": "resolution_steps",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "cf214d7d64c0a50a81833d15230eaeb59e2d3f0b56c1f3e4ed3bd411c174ceec",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "50421872094e908efccc56594a56822c5c9f0fdd1b9931a029e530681a231f8f",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "opening": "Olá, Carla. Segue abaixo o passo a passo para corrigir a exibição de acentos no relatório CSV exportado do sistema de gestão financeira.",
+      "steps": [
+        {
+          "number": 1,
+          "action": "No Excel, vá em Dados > Obter Dados > De Arquivo > De Texto/CSV, selecione o arquivo exportado e, na janela de visualização, defina a Origem do arquivo como UTF-8 antes de carregar.",
+          "why": "",
+          "expected_result": "O relatório será aberto com os acentos exibidos corretamente (por exemplo, 'Descrição' em vez de 'DescriÃ§Ã£o')."
+        },
+        {
+          "number": 2,
+          "action": "Se o passo 1 não funcionar, abra o arquivo CSV no Bloco de Notas, vá em Arquivo > Salvar como, escolha Codificação UTF-8 e salve o arquivo. Em seguida, abra esse novo arquivo no Excel normalmente.",
+          "why": "",
+          "expected_result": "O arquivo será reencodificado para UTF-8 e os acentos aparecerão corretos ao abrir no Excel."
+        },
+        {
+          "number": 3,
+          "action": "Se ainda houver problema, exporte novamente o relatório mensal diretamente do sistema de gestão financeira e repita o passo 1 com o novo arquivo.",
+          "why": "",
+          "expected_result": "Um novo arquivo CSV será gerado pelo sistema e, ao ser aberto com codificação UTF-8, exibirá os acentos corretamente."
+        },
+        {
+          "number": 4,
+          "action": "Como alternativa, exporte o relatório em outro formato disponível no sistema (por exemplo, XLSX ou PDF) e verifique se os acentos estão corretos antes de enviar para a diretoria.",
+          "why": "",
+          "expected_result": "Você terá um arquivo alternativo com acentos corretos para entregar até sexta-feira."
+        }
+      ],
+      "if_not_resolved": "Se nenhuma das alternativas funcionar, entre em contato com o suporte informando: (1) o navegador e a versão que está usando, (2) se o problema ocorre em todos os relatórios ou apenas no mensal de despesas, (3) o dia e horário aproximado da exportação e (4) anexe um exemplo do CSV com os acentos quebrados. Não envie senhas nem dados pessoais."
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 5193,
+      "usage": {
+        "prompt_tokens": 816,
+        "output_tokens": 518,
+        "total_tokens": 1334
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": null
+  },
+  {
+    "run_id": "00ff3f937bcc",
+    "timestamp": "2026-11-22T13:00:51-03:00",
+    "customer_id": "bruna-avancado-email",
+    "customer": {
+      "id": "bruna-avancado-email",
+      "name": "Bruna Costa",
+      "technical_level": "avançado",
+      "communication_style": "didático",
+      "channel": "e-mail",
+      "context": "Coordenadora de TI que repassa as orientações para a equipe interna. Quer entender o porquê de cada passo para conseguir explicar aos outros."
+    },
+    "ticket_id": "T003",
+    "ticket": {
+      "id": "T003",
+      "title": "Relatório exportado em CSV com acentos quebrados",
+      "product": "Sistema de gestão financeira (web)",
+      "description": "Quando exporto o relatório mensal de despesas em CSV e abro no Excel, todos os acentos aparecem errados, por exemplo 'DescriÃ§Ã£o' em vez de 'Descrição'. No mês passado funcionava. Preciso enviar esse relatório para a diretoria até sexta."
+    },
+    "content_type": "resolution_steps",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "cacf9d3015573f56444ef80f7031157015c31e44bb71a26e7f3c511b4e42068d",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "512d3f1812cc05a2b2357b171df3dd0f3997bbc0e0faa425200f683ca3bf232e",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "opening": "Olá, Bruna. Segue abaixo o procedimento para corrigir a exibição de acentos no CSV exportado do Sistema de Gestão Financeira.",
+      "steps": [
+        {
+          "number": 1,
+          "action": "Abra o arquivo CSV exportado em um editor de texto (ex: Notepad++, VS Code ou Bloco de Notas) e verifique se os caracteres acentuados aparecem corretamente no conteúdo bruto do arquivo.",
+          "why": "Para confirmar se a corrompção ocorre na exportação do sistema ou apenas na interpretação do Excel ao abrir o arquivo.",
+          "expected_result": "Os acentos aparecem corretamente no editor de texto, indicando que o arquivo está salvo com codificação adequada e o problema está na importação pelo Excel."
+        },
+        {
+          "number": 2,
+          "action": "No Excel, vá em Dados > Obter Dados > De Arquivo > De Texto/CSV, selecione o arquivo exportado e, na janela de visualização, defina a Origem do Arquivo como UTF-8 antes de carregar.",
+          "why": "Para forçar o Excel a interpretar o CSV usando UTF-8, que é a codificação padrão para caracteres acentuados, evitando a leitura incorreta como ANSI/Windows-1252.",
+          "expected_result": "Os acentos são exibidos corretamente na planilha após o carregamento dos dados."
+        },
+        {
+          "number": 3,
+          "action": "Se o passo anterior não funcionar, abra o CSV no Bloco de Notas, vá em Arquivo > Salvar como, escolha Codificação UTF-8 e salve o arquivo com um novo nome.",
+          "why": "Para regravar o arquivo com codificação UTF-8 explícita, garantindo que os bytes dos caracteres acentuados estejam corretos para qualquer aplicação que o abra.",
+          "expected_result": "O arquivo salvo em UTF-8 abre corretamente no Excel com os acentos exibidos normalmente."
+        },
+        {
+          "number": 4,
+          "action": "Verifique no sistema se há uma opção de configuração de exportação ou codificação de CSV (ex: em Configurações > Exportação ou Relatórios) e selecione UTF-8, se disponível.",
+          "why": "Para garantir que futuras exportações já sejam geradas com a codificação correta, evitando a necessidade de conversão manual após cada download.",
+          "expected_result": "O sistema passa a exportar o CSV em UTF-8 e o arquivo abre corretamente no Excel sem ajustes adicionais."
+        }
+      ],
+      "if_not_resolved": "Se nenhuma das alternativas acima resolver, entre em contato pelo canal de suporte e envie: (1) o arquivo CSV original exportado pelo sistema, (2) uma captura de tela da opção de exportação utilizada e (3) a versão do navegador e do sistema operacional usados. Com esses dados, a equipe técnica poderá verificar se houve alteração recente na geração do relatório."
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 5410,
+      "usage": {
+        "prompt_tokens": 802,
+        "output_tokens": 646,
+        "total_tokens": 1448
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": null
+  }
+]
