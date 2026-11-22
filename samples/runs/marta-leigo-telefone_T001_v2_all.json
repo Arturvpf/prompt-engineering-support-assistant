@@ -1,0 +1,369 @@
+[
+  {
+    "run_id": "e644b6a470ad",
+    "timestamp": "2026-11-22T13:00:06-03:00",
+    "customer_id": "marta-leigo-telefone",
+    "customer": {
+      "id": "marta-leigo-telefone",
+      "name": "Marta Souza",
+      "technical_level": "leigo",
+      "communication_style": "didático",
+      "channel": "telefone",
+      "context": "Aposentada, usa o computador e o celular para e-mail, banco e videochamadas com a família. Fica insegura quando vê termos técnicos."
+    },
+    "ticket_id": "T001",
+    "ticket": {
+      "id": "T001",
+      "title": "Internet caindo à noite",
+      "product": "Internet residencial fibra 300 Mb",
+      "description": "Toda noite, mais ou menos depois das 20h, a internet fica muito lenta e às vezes cai de vez. Durante o dia funciona normal. Já desliguei e liguei o aparelho da internet mas não adiantou. As videochamadas com meus netos ficam travando."
+    },
+    "content_type": "diagnosis",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "4df72d12d988efb18009022ec3db0cbd7fe0d191922a49c19fbff8424bfffcf8",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "bba265c2a310e3c05913c4acc5aaa66769944e7b210bcff6e2bd88648d3275c5",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "hypotheses": [
+        {
+          "id": "H1",
+          "description": "Sobrecarga da rede no horário de pico, quando muitas pessoas usam a internet ao mesmo tempo na região",
+          "likelihood": "alta"
+        },
+        {
+          "id": "H2",
+          "description": "Problema no aparelho de internet (roteador) que esquenta ou trava depois de ficar ligado por muitas horas",
+          "likelihood": "média"
+        },
+        {
+          "id": "H3",
+          "description": "Interferência de outros aparelhos sem fio usados à noite, como micro-ondas ou telefones sem fio",
+          "likelihood": "baixa"
+        },
+        {
+          "id": "H4",
+          "description": "Limite de uso de dados atingido no plano, reduzindo a velocidade no período noturno",
+          "likelihood": "baixa"
+        }
+      ],
+      "evidence": [
+        {
+          "signal": "Toda noite, mais ou menos depois das 20h, a internet fica muito lenta e às vezes cai de vez",
+          "supports": [
+            "H1",
+            "H2"
+          ],
+          "weakens": [
+            "H4"
+          ]
+        },
+        {
+          "signal": "Durante o dia funciona normal",
+          "supports": [
+            "H1",
+            "H2",
+            "H3"
+          ],
+          "weakens": [
+            "H4"
+          ]
+        },
+        {
+          "signal": "Já desliguei e liguei o aparelho da internet mas não adiantou",
+          "supports": [
+            "H1"
+          ],
+          "weakens": [
+            "H2"
+          ]
+        },
+        {
+          "signal": "As videochamadas com meus netos ficam travando",
+          "supports": [
+            "H1",
+            "H2",
+            "H3"
+          ],
+          "weakens": []
+        }
+      ],
+      "missing_information": [
+        {
+          "item": "Se a queda acontece também no celular conectado pelo Wi-Fi",
+          "why_it_matters": "Ajuda a saber se o problema é do aparelho de internet ou da linha que chega até a casa"
+        },
+        {
+          "item": "Se algum outro aparelho da casa fica sem internet no mesmo horário",
+          "why_it_matters": "Confirma se o problema afeta toda a rede ou apenas um dispositivo"
+        },
+        {
+          "item": "Se o plano de internet tem limite de dados mensal",
+          "why_it_matters": "Descarta ou confirma a possibilidade de redução de velocidade por consumo"
+        },
+        {
+          "item": "Se há aparelhos como micro-ondas ligados perto do roteador no período da noite",
+          "why_it_matters": "Avalia se há interferência sem fio causando a queda"
+        }
+      ],
+      "probable_conclusion": {
+        "hypothesis_id": "H1",
+        "summary": "O mais provável é que a internet fique lenta à noite porque muitas pessoas estão usando a rede ao mesmo tempo nesse horário, como um trânsito movimentado. Isso costuma acontecer depois das 20h e melhora depois que o movimento diminui.",
+        "confidence": "média",
+        "how_to_confirm": "Observar se a internet volta a funcionar bem depois da noite, por exemplo por volta das 23 horas, e se o problema continua apenas nesse horário"
+      }
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 5597,
+      "usage": {
+        "prompt_tokens": 969,
+        "output_tokens": 656,
+        "total_tokens": 1625
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": null
+  },
+  {
+    "run_id": "2fe268bf2063",
+    "timestamp": "2026-11-22T13:00:15-03:00",
+    "customer_id": "marta-leigo-telefone",
+    "customer": {
+      "id": "marta-leigo-telefone",
+      "name": "Marta Souza",
+      "technical_level": "leigo",
+      "communication_style": "didático",
+      "channel": "telefone",
+      "context": "Aposentada, usa o computador e o celular para e-mail, banco e videochamadas com a família. Fica insegura quando vê termos técnicos."
+    },
+    "ticket_id": "T001",
+    "ticket": {
+      "id": "T001",
+      "title": "Internet caindo à noite",
+      "product": "Internet residencial fibra 300 Mb",
+      "description": "Toda noite, mais ou menos depois das 20h, a internet fica muito lenta e às vezes cai de vez. Durante o dia funciona normal. Já desliguei e liguei o aparelho da internet mas não adiantou. As videochamadas com meus netos ficam travando."
+    },
+    "content_type": "resolution_steps",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "fde505652595141b1b77774200aa82c551509e853a21b4b1bddcdf4a33ab540b",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "dbb5830f9d0d3d601b35c9ef2e621c974791392e17f8f8feae1d913ba6ec404f",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "opening": "Boa noite, Marta. Vou te ajudar com a internet que cai à noite. Vamos fazer testes simples, um de cada vez. Pode me dizer se a luz do aparelho da internet está acesa e se está piscando?",
+      "steps": [
+        {
+          "number": 1,
+          "action": "Desligue o aparelho da internet da tomada, espere trinta segundos e ligue novamente.",
+          "why": "Para reiniciar o aparelho e limpar possíveis travamentos temporários.",
+          "expected_result": "As luzes do aparelho voltam a acender e a internet volta a funcionar."
+        },
+        {
+          "number": 2,
+          "action": "Olhe a tela do aparelho da internet e me diga se alguma luz está vermelha ou piscando de forma diferente do normal.",
+          "why": "Para saber se o aparelho está com algum problema de conexão.",
+          "expected_result": "Você consegue identificar se há alguma luz vermelha ou piscando anormalmente."
+        },
+        {
+          "number": 3,
+          "action": "Aproxime o celular do aparelho da internet e tente fazer uma videochamada.",
+          "why": "Para verificar se o problema é apenas de distância entre o celular e o aparelho.",
+          "expected_result": "A videochamada funciona sem travar quando o celular está perto do aparelho."
+        },
+        {
+          "number": 4,
+          "action": "Desligue outros aparelhos que estejam usando a internet, como televisão por assinatura ou outros celulares, e tente usar a internet novamente.",
+          "why": "Para ver se muitos aparelhos conectados ao mesmo tempo estão deixando a internet lenta.",
+          "expected_result": "A internet fica mais rápida após desligar os outros aparelhos."
+        },
+        {
+          "number": 5,
+          "action": "Anote o horário exato em que a internet começa a ficar lenta ou cair.",
+          "why": "Para termos um registro do problema e ajudar a identificar a causa.",
+          "expected_result": "Você tem o horário anotado para nos informar."
+        }
+      ],
+      "if_not_resolved": "Se nada funcionar, entre em contato conosco novamente e informe o horário em que o problema começa, se alguma luz do aparelho fica vermelha e se o problema acontece em todos os aparelhos ou apenas em um."
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 9082,
+      "usage": {
+        "prompt_tokens": 850,
+        "output_tokens": 498,
+        "total_tokens": 1348
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": null
+  },
+  {
+    "run_id": "6db2354cbc61",
+    "timestamp": "2026-11-22T13:00:17-03:00",
+    "customer_id": "marta-leigo-telefone",
+    "customer": {
+      "id": "marta-leigo-telefone",
+      "name": "Marta Souza",
+      "technical_level": "leigo",
+      "communication_style": "didático",
+      "channel": "telefone",
+      "context": "Aposentada, usa o computador e o celular para e-mail, banco e videochamadas com a família. Fica insegura quando vê termos técnicos."
+    },
+    "ticket_id": "T001",
+    "ticket": {
+      "id": "T001",
+      "title": "Internet caindo à noite",
+      "product": "Internet residencial fibra 300 Mb",
+      "description": "Toda noite, mais ou menos depois das 20h, a internet fica muito lenta e às vezes cai de vez. Durante o dia funciona normal. Já desliguei e liguei o aparelho da internet mas não adiantou. As videochamadas com meus netos ficam travando."
+    },
+    "content_type": "clarifying_questions",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "9811717e6c09936b3a906b8ddb8be3f41eac42295ca8ebc2499a8e48d5b67e08",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "d6ace1a20adb6f1e61a5a5a82062646f90bf7b78dc8c3862421ba5f1abac6136",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "questions": [
+        {
+          "priority": 1,
+          "question": "O problema acontece no computador, no celular ou nos dois ao mesmo tempo?",
+          "reason": "Isso mostra se o problema é do aparelho ou da internet da casa.",
+          "how_to_find": "Olhe para os aparelhos que você usa à noite e veja se a internet trava neles."
+        },
+        {
+          "priority": 2,
+          "question": "Alguma luz do aparelho da internet muda de cor ou apaga quando a internet cai?",
+          "reason": "Isso ajuda a saber se o aparelho está perdendo o sinal.",
+          "how_to_find": "Olhe para as luzes do aparelho da internet no momento em que a internet parar de funcionar."
+        },
+        {
+          "priority": 3,
+          "question": "Você tem algum aparelho ligado apenas à noite, como aquecedor ou micro-ondas, perto do aparelho da internet?",
+          "reason": "Alguns aparelhos podem atrapalhar o sinal sem fio.",
+          "how_to_find": "Veja o que está ligado perto do aparelho da internet depois das 20 horas."
+        }
+      ]
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 2167,
+      "usage": {
+        "prompt_tokens": 798,
+        "output_tokens": 247,
+        "total_tokens": 1045
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": null
+  },
+  {
+    "run_id": "17bf3620deb5",
+    "timestamp": "2026-11-22T13:00:20-03:00",
+    "customer_id": "marta-leigo-telefone",
+    "customer": {
+      "id": "marta-leigo-telefone",
+      "name": "Marta Souza",
+      "technical_level": "leigo",
+      "communication_style": "didático",
+      "channel": "telefone",
+      "context": "Aposentada, usa o computador e o celular para e-mail, banco e videochamadas com a família. Fica insegura quando vê termos técnicos."
+    },
+    "ticket_id": "T001",
+    "ticket": {
+      "id": "T001",
+      "title": "Internet caindo à noite",
+      "product": "Internet residencial fibra 300 Mb",
+      "description": "Toda noite, mais ou menos depois das 20h, a internet fica muito lenta e às vezes cai de vez. Durante o dia funciona normal. Já desliguei e liguei o aparelho da internet mas não adiantou. As videochamadas com meus netos ficam travando."
+    },
+    "content_type": "flow_summary",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "70fe7829e37e10d124ab5f67aeff64d0ff5b5ffa8c5ab30992f5fbec7a44eec6",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "0a376d7c3a0ae56a074b29bf5b4be724923b8126f8339a7f7deac9bdb0accb5a",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "ascii_flowchart": "+-------------------+\n| Internet caindo a |\n| noite apos 20h    |\n+-------------------+\n          v\n+-------------------+\n| Verificar se luz  |\n| do aparelho esta  |\n| piscando ou vermelha |\n+-------------------+\n          v\n+-------------------+\n| Desligar aparelho |\n| da tomada por 1   |\n| minuto e ligar    |\n+-------------------+\n          v\n+-------------------+\n| Testar internet   |\n| apos 20h          |\n+-------------------+\n          v\n+-------------------+\n| Melhorou?         |\n+-------------------+\n          v sim\n+-------------------+\n| RESOLVIDO         |\n+-------------------+\n          v nao\n+-------------------+\n| ESCALAR PARA N2   |\n+-------------------+",
+      "decision_points": [
+        {
+          "question": "A luz do aparelho esta piscando ou vermelha?",
+          "if_yes": "Desligue o aparelho da tomada por um minuto e ligue novamente",
+          "if_no": "Desligue o aparelho da tomada por um minuto e ligue novamente"
+        },
+        {
+          "question": "A internet melhorou apos 20h?",
+          "if_yes": "RESOLVIDO",
+          "if_no": "ESCALAR PARA N2"
+        }
+      ],
+      "escalation": {
+        "when": "Quando o cliente testar apos 20h e a internet continuar lenta ou caindo",
+        "attach": [
+          "Relato do cliente: internet lenta ou caindo apos 20h",
+          "Confirmacao que reinicio do aparelho nao resolveu",
+          "Horario aproximado do problema",
+          "Numero do contrato ou endereco"
+        ]
+      }
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 2851,
+      "usage": {
+        "prompt_tokens": 860,
+        "output_tokens": 397,
+        "total_tokens": 1257
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": null
+  }
+]

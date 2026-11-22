@@ -1,0 +1,266 @@
+[
+  {
+    "run_id": "eb175e7426d2",
+    "timestamp": "2026-11-21T12:29:05-03:00",
+    "customer_id": "rafael-avancado-chat",
+    "customer": {
+      "id": "rafael-avancado-chat",
+      "name": "Rafael Lima",
+      "technical_level": "avançado",
+      "communication_style": "direto",
+      "channel": "chat",
+      "context": "Desenvolvedor backend em uma startup. Integra sistemas via API e prefere respostas curtas com comandos e códigos de erro."
+    },
+    "ticket_id": "T002",
+    "ticket": {
+      "id": "T002",
+      "title": "Webhook de pagamento falhando de forma intermitente",
+      "product": "API de pagamentos - plano Business",
+      "description": "Desde ontem cerca de 30% dos webhooks de 'payment.approved' não estão chegando no nosso endpoint. No painel aparece status 'failed' com 'timeout'. Nosso endpoint responde em ~200ms nos testes locais. Não mudamos nada no deploy, pelo que eu saiba."
+    },
+    "content_type": "diagnosis",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "d39b49c356b7ce4d1801f285a7e14950ae2705dd2f5af3693850d1d910c8136a",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "00da140d98d86a629e28ce7b0f47b00a2bff3753b9f3d4f174ddcaee8bca6218",
+    "cache_hit": false,
+    "source_run_id": null,
+    "output": {
+      "hypotheses": [
+        {
+          "id": "H1",
+          "description": "Timeout do webhook causado por lentidão ou instabilidade na rede entre a API de pagamentos e o endpoint do cliente.",
+          "likelihood": "alta"
+        },
+        {
+          "id": "H2",
+          "description": "Limite de taxa (rate limiting) ou bloqueio de IP da API de pagamentos no firewall/WAF do cliente.",
+          "likelihood": "média"
+        },
+        {
+          "id": "H3",
+          "description": "Sobrecarga intermitente do servidor do endpoint do cliente, elevando o tempo de resposta acima do limite da API.",
+          "likelihood": "média"
+        },
+        {
+          "id": "H4",
+          "description": "Falha intermitente na infraestrutura de envio de webhooks da API de pagamentos.",
+          "likelihood": "baixa"
+        }
+      ],
+      "evidence": [
+        {
+          "signal": "30% dos webhooks de 'payment.approved' não estão chegando",
+          "supports": [
+            "H1",
+            "H2",
+            "H3",
+            "H4"
+          ],
+          "weakens": []
+        },
+        {
+          "signal": "status 'failed' com 'timeout'",
+          "supports": [
+            "H1",
+            "H3"
+          ],
+          "weakens": [
+            "H2"
+          ]
+        },
+        {
+          "signal": "Nosso endpoint responde em ~200ms nos testes locais",
+          "supports": [
+            "H1",
+            "H4"
+          ],
+          "weakens": [
+            "H3"
+          ]
+        },
+        {
+          "signal": "Não mudamos nada no deploy",
+          "supports": [
+            "H1",
+            "H4"
+          ],
+          "weakens": [
+            "H3"
+          ]
+        }
+      ],
+      "missing_information": [
+        {
+          "item": "Logs de acesso do servidor do endpoint (códigos de status HTTP e tempos de resposta reais)",
+          "why_it_matters": "Confirma se as requisições chegaram ao servidor e se excederam o tempo limite da API de pagamentos."
+        },
+        {
+          "item": "Logs da API de pagamentos (tentativas de envio, IPs de origem e erros de conexão)",
+          "why_it_matters": "Distingue entre problema de rede, bloqueio de IP ou falha na infraestrutura da API."
+        },
+        {
+          "item": "Tempo limite configurado para webhooks na API de pagamentos",
+          "why_it_matters": "Define se 200ms é suficiente ou se há variação de rede causando timeout."
+        }
+      ],
+      "probable_conclusion": {
+        "hypothesis_id": "H1",
+        "summary": "Webhooks com timeout intermitente. Provável problema de rede entre a API de pagamentos e seu endpoint. Verifique logs de acesso e tempo de resposta real em produção.",
+        "confidence": "média",
+        "how_to_confirm": "Comparar logs de acesso do endpoint com os registros de falha da API de pagamentos nos mesmos horários."
+      }
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 1,
+      "latency_ms": 6274,
+      "usage": {
+        "prompt_tokens": 929,
+        "output_tokens": 599,
+        "total_tokens": 1528
+      },
+      "model_reported": "nvidia/nemotron-3.5-super-vl:free",
+      "finish_reason": "STOP"
+    },
+    "evaluation": null
+  },
+  {
+    "run_id": "74afd21f940c",
+    "timestamp": "2026-11-22T13:00:21-03:00",
+    "customer_id": "rafael-avancado-chat",
+    "customer": {
+      "id": "rafael-avancado-chat",
+      "name": "Rafael Lima",
+      "technical_level": "avançado",
+      "communication_style": "direto",
+      "channel": "chat",
+      "context": "Desenvolvedor backend em uma startup. Integra sistemas via API e prefere respostas curtas com comandos e códigos de erro."
+    },
+    "ticket_id": "T002",
+    "ticket": {
+      "id": "T002",
+      "title": "Webhook de pagamento falhando de forma intermitente",
+      "product": "API de pagamentos - plano Business",
+      "description": "Desde ontem cerca de 30% dos webhooks de 'payment.approved' não estão chegando no nosso endpoint. No painel aparece status 'failed' com 'timeout'. Nosso endpoint responde em ~200ms nos testes locais. Não mudamos nada no deploy, pelo que eu saiba."
+    },
+    "content_type": "diagnosis",
+    "prompt_version": "v2",
+    "prompt_fingerprint": "d39b49c356b7ce4d1801f285a7e14950ae2705dd2f5af3693850d1d910c8136a",
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3.5-super-vl:free",
+    "generation_params": {
+      "provider": "openrouter",
+      "model": "nvidia/nemotron-3.5-super-vl:free",
+      "temperature": 0.2,
+      "max_output_tokens": 2048,
+      "seed": 42,
+      "thinking_budget": 0
+    },
+    "cache_key": "00da140d98d86a629e28ce7b0f47b00a2bff3753b9f3d4f174ddcaee8bca6218",
+    "cache_hit": true,
+    "source_run_id": "eb175e7426d2",
+    "output": {
+      "hypotheses": [
+        {
+          "id": "H1",
+          "description": "Timeout do webhook causado por lentidão ou instabilidade na rede entre a API de pagamentos e o endpoint do cliente.",
+          "likelihood": "alta"
+        },
+        {
+          "id": "H2",
+          "description": "Limite de taxa (rate limiting) ou bloqueio de IP da API de pagamentos no firewall/WAF do cliente.",
+          "likelihood": "média"
+        },
+        {
+          "id": "H3",
+          "description": "Sobrecarga intermitente do servidor do endpoint do cliente, elevando o tempo de resposta acima do limite da API.",
+          "likelihood": "média"
+        },
+        {
+          "id": "H4",
+          "description": "Falha intermitente na infraestrutura de envio de webhooks da API de pagamentos.",
+          "likelihood": "baixa"
+        }
+      ],
+      "evidence": [
+        {
+          "signal": "30% dos webhooks de 'payment.approved' não estão chegando",
+          "supports": [
+            "H1",
+            "H2",
+            "H3",
+            "H4"
+          ],
+          "weakens": []
+        },
+        {
+          "signal": "status 'failed' com 'timeout'",
+          "supports": [
+            "H1",
+            "H3"
+          ],
+          "weakens": [
+            "H2"
+          ]
+        },
+        {
+          "signal": "Nosso endpoint responde em ~200ms nos testes locais",
+          "supports": [
+            "H1",
+            "H4"
+          ],
+          "weakens": [
+            "H3"
+          ]
+        },
+        {
+          "signal": "Não mudamos nada no deploy",
+          "supports": [
+            "H1",
+            "H4"
+          ],
+          "weakens": [
+            "H3"
+          ]
+        }
+      ],
+      "missing_information": [
+        {
+          "item": "Logs de acesso do servidor do endpoint (códigos de status HTTP e tempos de resposta reais)",
+          "why_it_matters": "Confirma se as requisições chegaram ao servidor e se excederam o tempo limite da API de pagamentos."
+        },
+        {
+          "item": "Logs da API de pagamentos (tentativas de envio, IPs de origem e erros de conexão)",
+          "why_it_matters": "Distingue entre problema de rede, bloqueio de IP ou falha na infraestrutura da API."
+        },
+        {
+          "item": "Tempo limite configurado para webhooks na API de pagamentos",
+          "why_it_matters": "Define se 200ms é suficiente ou se há variação de rede causando timeout."
+        }
+      ],
+      "probable_conclusion": {
+        "hypothesis_id": "H1",
+        "summary": "Webhooks com timeout intermitente. Provável problema de rede entre a API de pagamentos e seu endpoint. Verifique logs de acesso e tempo de resposta real em produção.",
+        "confidence": "média",
+        "how_to_confirm": "Comparar logs de acesso do endpoint com os registros de falha da API de pagamentos nos mesmos horários."
+      }
+    },
+    "warnings": [],
+    "metrics": {
+      "attempts": 0,
+      "latency_ms": 0,
+      "usage": {}
+    },
+    "evaluation": null
+  }
+]
