@@ -7,6 +7,7 @@ existem, então o mesmo formatador serve para todas as versões.
 from __future__ import annotations
 
 import textwrap
+from contextvars import ContextVar
 
 from .content_types import get_content_type
 from .evaluation import CRITERIA
@@ -83,8 +84,13 @@ def render_comparison(comp: dict) -> str:
     return "\n".join(lines)
 
 
-def render_output(content_type: str, output: dict) -> str:
-    return _RENDERERS[content_type](output).rstrip()
+def render_output(content_type: str, output: dict, wrap: bool = True) -> str:
+    """Texto legível da saída. ``wrap=False`` não quebra linhas (a web quebra sozinha)."""
+    token = _WRAP.set(wrap)
+    try:
+        return _RENDERERS[content_type](output).rstrip()
+    finally:
+        _WRAP.reset(token)
 
 
 # ------------------------------------------------------------- por tipo
@@ -170,12 +176,18 @@ _RENDERERS = {
 
 # ------------------------------------------------------------- helpers
 
+_WRAP: ContextVar[bool] = ContextVar("wrap", default=True)
+
+
 def _item(label: str, text) -> str:
     """Rótulo seguido de texto com quebra de linha alinhada."""
     text = str(text) if text is not None else ""
+    line = f"{label} {text}".rstrip()
+    if not _WRAP.get():
+        return line
     indent = " " * (len(label) - len(label.lstrip()) + 2)
-    return textwrap.fill(f"{label} {text}".rstrip(), width=WIDTH, subsequent_indent=indent)
+    return textwrap.fill(line, width=WIDTH, subsequent_indent=indent)
 
 
 def _wrap(text: str) -> str:
-    return textwrap.fill(str(text), width=WIDTH)
+    return textwrap.fill(str(text), width=WIDTH) if _WRAP.get() else str(text)

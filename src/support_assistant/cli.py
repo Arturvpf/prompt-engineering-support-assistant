@@ -11,6 +11,8 @@ Uso rápido::
     python main.py evaluate RUN_ID                              # dá as notas da rubrica (pergunta cada uma)
     python main.py evaluate RUN_ID --clarity 4 "..." --customer-fit 3 "..." --actionability 5 "..."
     python main.py compare RUN_V1 RUN_V2 --verdict "por que a v2 é melhor..."
+    python main.py stats                                        # cache, tokens, latência
+    python main.py web                                          # interface web em http://127.0.0.1:8000
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ from .evaluation import (
 from .formatting import render_comparison, render_evaluation, render_record
 from .history import HistoryError, HistoryStore
 from .llm_client import LLMError
+from .observability import configure_logging, history_stats
 from .prompt_engine import PromptEngine, PromptError
 from .service import HISTORY_FILENAME, AssistantService
 
@@ -51,6 +54,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
     try:
+        settings = load_settings(require_api_key=False)
+        configure_logging(settings.output_dir / "logs", settings.log_level)
         if args.command == "list":
             return cmd_list()
         if args.command == "generate":
@@ -61,6 +66,12 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_evaluate(args)
         if args.command == "compare":
             return cmd_compare(args)
+        if args.command == "stats":
+            return cmd_stats(args)
+        if args.command == "web":
+            from .web import serve
+
+            return serve(args.host, args.port)
         return cmd_interactive()
     except UserInputError as exc:
         print(f"Entrada inválida: {exc}", file=sys.stderr)
@@ -188,6 +199,26 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_stats(args: argparse.Namespace) -> int:
+    store = _store()
+    s = history_stats(store.load())
+    if args.json:
+        print(json.dumps(s, ensure_ascii=False, indent=2))
+        return 0
+    print(f"Histórico: {store.path}")
+    print(f"  execuções: {s['total_runs']}  |  chamadas ao modelo: {s['model_calls']}  |  "
+          f"cache hits: {s['cache_hits']} ({s['cache_hit_rate']:.0%})")
+    print(f"  tokens gastos: {s['tokens_total']}  |  tokens economizados pelo cache: {s['tokens_saved_by_cache']}")
+    print(f"  com correção de JSON: {s['runs_with_repair']}  |  com avisos: {s['runs_with_warnings']}  |  "
+          f"avaliadas: {s['evaluated_runs']}")
+    if s["by_version_and_type"]:
+        print(f"\n  {'versão':<7}{'tipo':<22}{'execuções':>10}{'latência média':>16}{'tokens médios':>15}")
+        for g in s["by_version_and_type"]:
+            print(f"  {g['prompt_version']:<7}{g['content_type']:<22}{g['runs']:>10}"
+                  f"{g['avg_latency_ms'] / 1000:>15.1f}s{g['avg_tokens']:>15}")
+    return 0
+
+
 # ------------------------------------------------------------------ execução
 
 def _run(customer, ticket, content_types, versions, use_cache: bool, as_json: bool) -> int:
@@ -255,6 +286,13 @@ def _build_parser() -> argparse.ArgumentParser:
     verdict.add_argument("--verdict", help="por que uma versão é melhor que a outra")
     verdict.add_argument("--verdict-file", type=Path, help="arquivo de texto com o veredito")
     cmp_.add_argument("--out", type=Path, help="onde salvar o JSON da comparação (padrão: outputs/comparisons/)")
+
+    st = sub.add_parser("stats", help="métricas do histórico: cache, tokens, latência, correções")
+    st.add_argument("--json", action="store_true", help="imprime em JSON")
+
+    web = sub.add_parser("web", help="abre a interface web local")
+    web.add_argument("--host", default="127.0.0.1", help="endereço (padrão: 127.0.0.1, só esta máquina)")
+    web.add_argument("--port", type=int, default=8000, help="porta (padrão: 8000)")
     return parser
 
 

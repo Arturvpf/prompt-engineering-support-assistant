@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Passo a passo de resolução",
+  "type": "object",
+  "required": ["steps", "if_not_resolved"],
+  "properties": {
+    "opening": {"type": "string"},
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["action"],
+        "properties": {
+          "number": {"type": "integer", "minimum": 1},
+          "action": {"$ref": "#/$defs/text"},
+          "why": {"type": "string"},
+          "expected_result": {"type": "string"}
+        }
+      }
+    },
+    "if_not_resolved": {"$ref": "#/$defs/text"}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "pattern": "\\S"}
+  }
+}

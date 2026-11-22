@@ -11,6 +11,12 @@ Este assistente de atendimento recebe um **perfil de cliente** e um **ticket** e
 
 Cada execução é salva em JSON com data/hora, versão do prompt, modelo e configurações. Uma execução equivalente é reaproveitada do cache. As versões de prompt podem ser comparadas com uma rubrica fixa: clareza, adequação ao cliente e acionabilidade, com notas de 1 a 5.
 
+Também há:
+- uma interface web local;
+- validação da saída com JSON Schema;
+- log de eventos com tempo, tokens e cache hit;
+- 87 testes automatizados que rodam sem chamar a API.
+
 As decisões de prompt, a comparação v1 × v2 e as limitações estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md).
 
 ---
@@ -69,7 +75,8 @@ python main.py list
 | `LLM_THINKING_BUDGET` | `0` | desativa o raciocínio interno do modelo (`none` usa o padrão) |
 | `LLM_TIMEOUT_SECONDS` | `60` | tempo limite por chamada |
 | `LLM_MAX_RETRIES` | `3` | novas tentativas em 408, 429, 5xx e falhas de rede |
-| `OUTPUT_DIR` | `outputs` | pasta do `history.json` (histórico e cache) |
+| `OUTPUT_DIR` | `outputs` | pasta do `history.json` (histórico e cache) e de `logs/events.jsonl` |
+| `LOG_LEVEL` | `WARNING` | eventos mostrados no terminal (`DEBUG`, `INFO`, `WARNING`, `ERROR`); o arquivo de eventos registra sempre a partir de `INFO` |
 
 ---
 
@@ -131,6 +138,36 @@ python main.py compare a2cf94288d19 524bbca9b910 --verdict "Por que a v2 é melh
 
 O `compare` recusa execuções que diferem em algo além da versão do prompt (cliente, ticket, provedor, modelo ou configurações). Também recusa execuções sem avaliação e registros vindos do cache. Por padrão, salva o resultado em `outputs/comparisons/`; use `--out` para escolher outro caminho.
 
+### Interface web
+
+```bash
+python main.py web            # abre em http://127.0.0.1:8000
+python main.py web --port 8080
+```
+
+A página permite:
+- escolher o perfil e o ticket, ou digitar um ticket novo;
+- marcar os tipos de conteúdo e uma ou mais versões, para comparar lado a lado;
+- ver cada resultado formatado, com tempo, tokens, origem (modelo ou cache), `run_id` e o JSON completo do registro;
+- consultar o histórico e as métricas em abas.
+
+A web usa o mesmo serviço, histórico e cache da CLI. O servidor usa só a biblioteca padrão (`http.server`) e escuta em `127.0.0.1`, ou seja, só nesta máquina. A avaliação com a rubrica e a comparação continuam pela CLI.
+
+### Métricas e logs
+
+```bash
+python main.py stats          # chamadas, cache hits, tokens gastos e economizados, latência por versão e tipo
+python main.py stats --json
+```
+
+Cada geração, cache hit, nova tentativa de chamada, saída inválida e falha é gravada como uma linha JSON em `outputs/logs/events.jsonl`. Exemplo:
+
+```json
+{"ts": "2026-11-22T13:25:01.811-03:00", "level": "INFO", "event": "cache_hit", "run_id": "b7ef3f592a98", "source_run_id": "a2cf94288d19", "tokens_saved": 747, "customer_id": "joao-leigo-chat", "ticket_id": "T004", "content_type": "diagnosis", "version": "v1", "model": "nvidia/nemotron-3.5-super-vl:free"}
+```
+
+Para ver os eventos também no terminal, use `LOG_LEVEL=INFO` no `.env`. O log nunca recebe a chave de API nem o texto do ticket.
+
 ### Exemplo de saída (trecho)
 
 ```
@@ -158,6 +195,22 @@ Exemplos completos em JSON estão em [`samples/`](samples/README.md).
 | `2` | entrada inválida (perfil, ticket, versão ou nota inexistente) |
 | `130` | cancelado com Ctrl+C |
 
+### Testes
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+São 87 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
+- montagem do prompt nas duas versões, incluindo regras de estilo, delimitação do ticket e o gabarito fora do prompt;
+- cache (hit, miss, invalidação por versão e por parâmetros, `--no-cache`, hit sem chave);
+- validação por schema, incluindo todas as saídas reais de `samples/`;
+- correção de JSON, retry com backoff e histórico;
+- rubrica e comparação, configuração, web e CLI.
+
+O GitHub Actions roda os testes em Python 3.10 e 3.12 a cada push na `main` e em cada PR (`.github/workflows/tests.yml`).
+
 ---
 
 ## Arquitetura
@@ -173,6 +226,7 @@ prompts/
     context.md               perfil + ticket (template com $variaveis)
     <tipo>.md                tarefa e formato JSON de cada tipo de conteúdo
     style_rules.json         (v2) regras de escrita por nível, estilo e canal
+schemas/                     JSON Schema de cada tipo de conteúdo (vale para v1 e v2)
 src/support_assistant/
   data_loader.py             carrega e valida perfis e tickets
   content_types.py           os 4 tipos e os campos obrigatórios de cada um
@@ -181,13 +235,16 @@ src/support_assistant/
   llm_client.py              cliente Gemini, retry com backoff e classificação de erros
   openrouter_client.py       cliente OpenRouter (API compatível com OpenAI, via httpx)
   generators.py              uma função por tipo; valida o JSON e tenta 1 correção se vier inválido
-  output_validation.py       extrai o JSON da resposta e confere campos e tipos
+  output_validation.py       extrai o JSON da resposta, valida contra o schema e gera avisos de coerência
   history.py                 histórico em JSON com gravação atômica
-  service.py                 cache + geração + gravação (a camada que a CLI usa)
+  service.py                 cache + geração + gravação (a camada que a CLI e a web usam)
   evaluation.py              rubrica, avaliação e comparação justa entre versões
+  observability.py           log de eventos em JSON lines e estatísticas do histórico
   formatting.py              saída legível no terminal
-  cli.py                     comandos interactive, list, generate, history, evaluate, compare
+  cli.py                     comandos interactive, list, generate, history, evaluate, compare, stats, web
+  web.py, static/index.html  interface web local (biblioteca padrão)
 samples/                     exemplos de saída e a comparação v1 x v2 completa
+tests/                       testes com pytest e cliente LLM falso
 ```
 
 ### Fluxo de uma geração
@@ -208,10 +265,11 @@ chave de cache = sha256(prompt renderizado + tipo + versão + provedor/modelo/pa
 chamada ao LLM (JSON mode, temperatura 0.2, seed 42, retry em erro temporário)
         |
         v
-valida o JSON  --inválido--> reenvia com o erro anexado (1 vez)
+valida contra schemas/<tipo>.schema.json  --inválido--> reenvia com o erro anexado (1 vez)
         |
         v
-grava o registro em outputs/history.json e mostra no terminal
+grava o registro em outputs/history.json, registra o evento em outputs/logs/events.jsonl
+e mostra no terminal (ou na web)
 ```
 
 ### O que vai em cada registro do histórico

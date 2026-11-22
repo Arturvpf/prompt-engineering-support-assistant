@@ -8,10 +8,12 @@ erro encontrado.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 
 from .data_loader import CustomerProfile, Ticket
 from .llm_client import LLMClient, LLMError, LLMResponse
+from .observability import log_event
 from .output_validation import OutputValidationError, parse_json_output, validate_output
 from .prompt_engine import PromptEngine, PromptPackage
 
@@ -87,6 +89,8 @@ def _generate(content_type: str, client: LLMClient, engine: PromptEngine,
             warnings = validate_output(content_type, output)
         except OutputValidationError as exc:
             last_error = str(exc)
+            log_event("output_invalid", logging.WARNING, content_type=content_type, version=version,
+                      attempt=attempt, will_retry=attempt <= MAX_REPAIR_ATTEMPTS, error=last_error[:300])
             user = prompt.user + REPAIR_INSTRUCTION.format(error=last_error)
             continue
         return GenerationResult(content_type, prompt, output, response, attempt, warnings)

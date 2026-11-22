@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assistente de Suporte</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2430; --muted: #5d6878; --border: #d9dee6;
+    --accent: #1f6feb; --accent-text: #ffffff; --ok: #1a7f37; --warn: #9a6700; --err: #cf222e;
+    --code-bg: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1419; --panel: #171d24; --text: #e3e8ef; --muted: #98a3b3; --border: #2c3540;
+      --accent: #4c8dff; --accent-text: #0b0f14; --ok: #3fb950; --warn: #d29922; --err: #f85149;
+      --code-bg: #10161d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 24px 8px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+  main { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px 24px 32px; }
+  main > * { min-width: 0; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  label { display: block; font-weight: 600; font-size: 13px; margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  select, textarea { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;
+                     background: var(--bg); color: var(--text); font: inherit; }
+  textarea { min-height: 90px; resize: vertical; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .checks label { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 4px 0; }
+  button { margin-top: 16px; width: 100%; padding: 10px; border: 0; border-radius: 6px;
+           background: var(--accent); color: var(--accent-text); font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+  .tabs button { width: auto; margin: 0; padding: 6px 12px; background: transparent; color: var(--muted);
+                 border: 1px solid var(--border); }
+  .tabs button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .result { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+  .result h3 { margin: 0; padding: 10px 12px; font-size: 14px; border-bottom: 1px solid var(--border);
+               display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .result h3 span { color: var(--muted); font-weight: 400; }
+  pre { margin: 0; padding: 12px; background: var(--code-bg); overflow-x: auto; white-space: pre-wrap;
+        font: 13px/1.45 ui-monospace, Consolas, monospace; }
+  pre.text { font: 14px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  pre.flow { white-space: pre; }
+  .meta { padding: 8px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+  .meta .cache { color: var(--ok); font-weight: 600; }
+  .meta .warn { color: var(--warn); }
+  .error { color: var(--err); padding: 12px; }
+  details summary { cursor: pointer; padding: 8px 12px; font-size: 12px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .stat { border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+  .stat b { display: block; font-size: 20px; }
+  .stat small { color: var(--muted); }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Assistente de Suporte</h1>
+  <p id="model">carregando...</p>
+</header>
+<main>
+  <form class="panel" id="form">
+    <label for="customer">Perfil do cliente</label>
+    <select id="customer" required></select>
+
+    <label for="ticket">Ticket</label>
+    <select id="ticket"></select>
+    <textarea id="ticket_text" placeholder="Ou descreva um problema novo aqui (substitui o ticket escolhido)" maxlength="4000"></textarea>
+    <div class="hint" id="ticket_desc"></div>
+
+    <label>Tipos de conteúdo</label>
+    <div class="checks" id="types"></div>
+
+    <label>Versões do prompt</label>
+    <div class="checks" id="versions"></div>
+    <div class="hint">Marque mais de uma para comparar no mesmo cenário.</div>
+
+    <div class="checks"><label><input type="checkbox" id="use_cache" checked> Usar cache</label></div>
+
+    <button type="submit" id="submit">Gerar</button>
+  </form>
+
+  <section class="panel">
+    <div class="tabs">
+      <button type="button" data-tab="results" class="active">Resultado</button>
+      <button type="button" data-tab="history">Histórico</button>
+      <button type="button" data-tab="stats">Métricas</button>
+    </div>
+    <div id="tab-results"><p class="empty">Escolha o perfil, o ticket e clique em Gerar.</p></div>
+    <div id="tab-history" hidden></div>
+    <div id="tab-stats" hidden></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, children = []) => {
+  const node = Object.assign(document.createElement(tag), props);
+  for (const c of [].concat(children)) node.append(c);
+  return node;
+};
+let options = null;
+
+async function api(path, body) {
+  const res = await fetch(path, body ? {
+    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body),
+  } : {});
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function check(name, value, text, checked) {
+  return el("label", {}, [el("input", {type: "checkbox", name, value, checked}), text]);
+}
+
+async function init() {
+  options = await api("/api/options");
+  $("model").textContent = `Modelo: ${options.model}  |  histórico salvo em ${options.history_path}`;
+  for (const c of options.customers)
+    $("customer").append(el("option", {value: c.id, textContent:
+      `${c.name}: ${c.technical_level}, ${c.communication_style}, ${c.channel}`}));
+  for (const t of options.tickets)
+    $("ticket").append(el("option", {value: t.id, textContent: `${t.id}: ${t.title}`}));
+  for (const ct of options.content_types) $("types").append(check("type", ct.id, ct.label, true));
+  options.versions.forEach((v, i) =>
+    $("versions").append(check("version", v.id, `${v.id}: ${v.description.slice(0, 60)}...`, i === options.versions.length - 1)));
+  const showDesc = () => {
+    const t = options.tickets.find((x) => x.id === $("ticket").value);
+    $("ticket_desc").textContent = t ? `"${t.description}"` : "";
+  };
+  $("ticket").addEventListener("change", showDesc);
+  showDesc();
+}
+
+function checked(name) {
+  return [...document.querySelectorAll(`input[name=${name}]:checked`)].map((i) => i.value);
+}
+
+$("form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const out = $("tab-results");
+  showTab("results");
+  $("submit").disabled = true;
+  $("submit").textContent = "Gerando...";
+  out.replaceChildren(el("p", {className: "empty", textContent: "Gerando, pode levar alguns segundos por tipo..."}));
+  try {
+    const data = await api("/api/generate", {
+      customer_id: $("customer").value,
+      ticket_id: $("ticket").value,
+      ticket_text: $("ticket_text").value,
+      content_types: checked("type"),
+      versions: checked("version"),
+      use_cache: $("use_cache").checked,
+    });
+    out.replaceChildren(...data.results.map(renderResult));
+  } catch (err) {
+    out.replaceChildren(el("p", {className: "error", textContent: `Erro: ${err.message}`}));
+  } finally {
+    $("submit").disabled = false;
+    $("submit").textContent = "Gerar";
+  }
+});
+
+function renderResult(r) {
+  const label = (options.content_types.find((c) => c.id === r.content_type) || {}).label || r.content_type;
+  const title = el("h3", {}, [label, el("span", {textContent: `prompt ${r.prompt_version}`})]);
+  if (r.error) return el("div", {className: "result"}, [title, el("p", {className: "error", textContent: r.error})]);
+
+  const m = r.metrics || {};
+  const meta = el("div", {className: "meta"});
+  if (r.cache_hit) meta.append(el("span", {className: "cache", textContent: `cache: reaproveitado de ${r.source_run_id}`}));
+  else meta.append(`${(m.latency_ms / 1000).toFixed(1)}s | tokens: ${(m.usage || {}).total_tokens ?? "?"} | tentativas: ${m.attempts}`);
+  meta.append(` | run_id ${r.run_id}`);
+  for (const w of r.warnings || []) meta.append(el("div", {className: "warn", textContent: `aviso: ${w}`}));
+
+  const pre = el("pre", {className: r.content_type === "flow_summary" ? "flow" : "text", textContent: r.rendered});
+  const raw = el("details", {}, [el("summary", {textContent: "JSON do registro"}),
+    el("pre", {textContent: JSON.stringify(r, (k, v) => (k === "rendered" ? undefined : v), 2)})]);
+  return el("div", {className: "result"}, [title, pre, meta, raw]);
+}
+
+async function loadHistory() {
+  const box = $("tab-history");
+  box.replaceChildren(el("p", {className: "empty", textContent: "Carregando..."}));
+  try {
+    const {runs} = await api("/api/history");
+    if (!runs.length) return box.replaceChildren(el("p", {className: "empty", textContent: "Nenhuma execução ainda."}));
+    const head = el("tr", {}, ["run_id", "data", "cliente", "ticket", "tipo", "versão", "origem", "nota"].map((h) => el("th", {textContent: h})));
+    const rows = runs.map((r) => el("tr", {}, [r.run_id, r.timestamp.slice(0, 19).replace("T", " "), r.customer_id,
+      r.ticket_id, r.content_type, r.prompt_version, r.cache_hit ? `cache de ${r.source_run_id}` : "modelo",
+      r.score == null ? "-" : `${r.score}/15`].map((v) => el("td", {textContent: v}))));
+    box.replaceChildren(el("table", {}, [head, ...rows]));
+  } catch (err) {
+    box.replaceChildren(el("p", {className: "error", textContent: `Erro: ${err.message}`}));
+  }
+}
+
+async function loadStats() {
+  const box = $("tab-stats");
+  try {
+    const s = await api("/api/stats");
+    const stat = (value, text) => el("div", {className: "stat"}, [el("b", {textContent: value}), el("small", {textContent: text})]);
+    const cards = el("div", {className: "stats"}, [
+      stat(s.model_calls, "chamadas ao modelo"),
+      stat(`${s.cache_hits} (${Math.round(s.cache_hit_rate * 100)}%)`, "cache hits"),
+      stat(s.tokens_total, "tokens gastos"),
+      stat(s.tokens_saved_by_cache, "tokens economizados pelo cache"),
+      stat(s.runs_with_repair, "com correção de JSON"),
+      stat(s.evaluated_runs, "execuções avaliadas"),
+    ]);
+    const head = el("tr", {}, ["versão", "tipo", "execuções", "latência média", "tokens médios"].map((h) => el("th", {textContent: h})));
+    const rows = s.by_version_and_type.map((g) => el("tr", {}, [g.prompt_version, g.content_type, g.runs,
+      `${(g.avg_latency_ms / 1000).toFixed(1)}s`, g.avg_tokens].map((v) => el("td", {textContent: v}))));
+    box.replaceChildren(cards, el("table", {}, [head, ...rows]));
+  } catch (err) {
+    box.replaceChildren(el("p", {className: "error", textContent: `Erro: ${err.message}`}));
+  }
+}
+
+function showTab(name) {
+  for (const b of document.querySelectorAll(".tabs button")) b.classList.toggle("active", b.dataset.tab === name);
+  for (const t of ["results", "history", "stats"]) $(`tab-${t}`).hidden = t !== name;
+  if (name === "history") loadHistory();
+  if (name === "stats") loadStats();
+}
+for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => showTab(b.dataset.tab));
+
+init().catch((err) => { $("model").textContent = `Erro ao carregar: ${err.message}`; });
+</script>
+</body>
+</html>
