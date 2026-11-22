@@ -11,6 +11,8 @@ Uso rápido::
     python main.py evaluate RUN_ID                              # dá as notas da rubrica (pergunta cada uma)
     python main.py evaluate RUN_ID --clarity 4 "..." --customer-fit 3 "..." --actionability 5 "..."
     python main.py compare RUN_V1 RUN_V2 --verdict "por que a v2 é melhor..."
+    python main.py stats                                        # cache, tokens, latência
+    python main.py web                                          # interface web em http://127.0.0.1:8000
 """
 
 from __future__ import annotations
