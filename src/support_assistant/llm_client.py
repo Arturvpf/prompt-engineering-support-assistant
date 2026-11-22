@@ -6,12 +6,14 @@ provedor ou usar um cliente falso nos testes não exige mudar os geradores.
 
 from __future__ import annotations
 
+import logging
 import random
 import time
 from dataclasses import dataclass, field
 from typing import Protocol
 
 from .config import Settings
+from .observability import log_event
 
 
 class LLMError(RuntimeError):
@@ -161,7 +163,10 @@ def call_with_retries(call, classify, max_retries: int) -> LLMResponse:
             error = classify(exc)
             if not getattr(error, "retryable", False) or attempt == attempts:
                 raise error from exc
-            time.sleep(_backoff(attempt))
+            wait = _backoff(attempt)
+            log_event("llm_retry", logging.WARNING, attempt=attempt, max_attempts=attempts,
+                      wait_s=round(wait, 1), error=type(error).__name__, message=str(error)[:200])
+            time.sleep(wait)
     raise LLMError("Nenhuma tentativa executada.")  # só se max_retries < 0
 
 

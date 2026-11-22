@@ -27,6 +27,7 @@ class Settings:
     max_retries: int
     output_dir: Path
     provider: str = "gemini"
+    log_level: str = "WARNING"
 
     def generation_params(self) -> dict:
         """Parâmetros que afetam a saída do modelo.
@@ -81,7 +82,18 @@ def load_settings(require_api_key: bool = True, env_file: Path | None = None) ->
         timeout_seconds=_number("LLM_TIMEOUT_SECONDS", 60, float, 1, 600),
         max_retries=_number("LLM_MAX_RETRIES", 3, int, 0, 10),
         output_dir=_path("OUTPUT_DIR", "outputs"),
+        log_level=_log_level(),
     )
+
+
+LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
+
+
+def _log_level() -> str:
+    raw = os.getenv("LOG_LEVEL", "").strip().upper() or "WARNING"
+    if raw not in LOG_LEVELS:
+        raise ConfigError(f"LOG_LEVEL deve ser um de {', '.join(LOG_LEVELS)}; recebido {raw!r}.")
+    return raw
 
 
 def _number(name: str, default, cast, minimum, maximum):

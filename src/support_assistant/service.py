@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from dataclasses import asdict
 from typing import Callable
 
@@ -21,7 +22,8 @@ from .config import Settings
 from .data_loader import CustomerProfile, Ticket
 from .generators import GENERATORS
 from .history import HistoryStore
-from .llm_client import LLMClient, create_client
+from .llm_client import LLMClient, LLMError, create_client
+from .observability import log_event
 from .prompt_engine import PromptEngine, PromptPackage
 
 HISTORY_FILENAME = "history.json"
@@ -86,9 +88,12 @@ class AssistantService:
             "cache_key": key,
         }
 
+        scope = {"customer_id": customer.id, "ticket_id": ticket.id, "content_type": content_type,
+                 "version": version, "model": params["model"]}
+
         cached = self.store.find_cached(key) if use_cache else None
         if cached is not None:
-            return self.store.append({
+            record = self.store.append({
                 **base,
                 "cache_hit": True,
                 "source_run_id": cached["run_id"],
@@ -97,9 +102,19 @@ class AssistantService:
                 "metrics": {"attempts": 0, "latency_ms": 0, "usage": {}},
                 "evaluation": None,
             })
+            saved = ((cached.get("metrics") or {}).get("usage") or {}).get("total_tokens")
+            log_event("cache_hit", run_id=record["run_id"], source_run_id=cached["run_id"],
+                      tokens_saved=saved, **scope)
+            return record
 
-        result = GENERATORS[content_type](self.client, self.engine, customer, ticket, version)
-        return self.store.append({
+        try:
+            result = GENERATORS[content_type](self.client, self.engine, customer, ticket, version)
+        except LLMError as exc:
+            log_event("generation_failed", logging.ERROR, error=type(exc).__name__,
+                      message=str(exc)[:300], **scope)
+            raise
+
+        record = self.store.append({
             **base,
             "cache_hit": False,
             "source_run_id": None,
@@ -112,9 +127,15 @@ class AssistantService:
                 "model_reported": result.response.model,
                 "finish_reason": result.response.finish_reason,
             },
-            # Reservado para as notas da rubrica (Fase 6).
+            # Preenchido depois pelo comando evaluate (rubrica).
             "evaluation": None,
         })
+        usage = result.response.usage or {}
+        log_event("generation", run_id=record["run_id"], latency_ms=result.response.latency_ms,
+                  prompt_tokens=usage.get("prompt_tokens"), output_tokens=usage.get("output_tokens"),
+                  total_tokens=usage.get("total_tokens"), attempts=result.attempts,
+                  warnings=len(result.warnings), **scope)
+        return record
 
 
 def _ticket_snapshot(ticket: Ticket) -> dict:
