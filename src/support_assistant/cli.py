@@ -7,6 +7,10 @@ Uso rápido::
     python main.py generate -c marta-leigo-telefone -t T001 --type all --version v2
     python main.py generate -c rafael-avancado-chat --text "API retorna 500 ao criar pedido" --type diagnosis
     python main.py generate -c joao-leigo-chat -t T004 --type resolution_steps --version v1 v2
+    python main.py history -c joao-leigo-chat -t T004            # execuções salvas (run_id)
+    python main.py evaluate RUN_ID                              # dá as notas da rubrica (pergunta cada uma)
+    python main.py evaluate RUN_ID --clarity 4 "..." --customer-fit 3 "..." --actionability 5 "..."
+    python main.py compare RUN_V1 RUN_V2 --verdict "por que a v2 é melhor..."
 """
 
 from __future__ import annotations
@@ -14,17 +18,28 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from .config import ConfigError, load_settings
 from .content_types import CONTENT_TYPES
 from .data_loader import DataValidationError, load_customers, load_tickets, make_adhoc_ticket
-from .formatting import render_record
-from .history import HistoryError
+from .evaluation import (
+    CRITERIA,
+    SCALE,
+    EvaluationError,
+    build_comparison,
+    default_comparison_path,
+    evaluate_run,
+    load_scores_file,
+    save_comparison,
+)
+from .formatting import render_comparison, render_evaluation, render_record
+from .history import HistoryError, HistoryStore
 from .llm_client import LLMError
 from .prompt_engine import PromptEngine, PromptError
-from .service import AssistantService
+from .service import HISTORY_FILENAME, AssistantService
 
-EXPECTED_ERRORS = (ConfigError, DataValidationError, PromptError, LLMError, HistoryError)
+EXPECTED_ERRORS = (ConfigError, DataValidationError, PromptError, LLMError, HistoryError, EvaluationError)
 
 
 class UserInputError(ValueError):
@@ -40,6 +55,12 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_list()
         if args.command == "generate":
             return cmd_generate(args)
+        if args.command == "history":
+            return cmd_history(args)
+        if args.command == "evaluate":
+            return cmd_evaluate(args)
+        if args.command == "compare":
+            return cmd_compare(args)
         return cmd_interactive()
     except UserInputError as exc:
         print(f"Entrada inválida: {exc}", file=sys.stderr)
@@ -113,6 +134,60 @@ def cmd_interactive() -> int:
     return _run(customer, ticket, content_types, selected_versions, use_cache=True, as_json=False)
 
 
+def cmd_history(args: argparse.Namespace) -> int:
+    store = _store()
+    records = [
+        r for r in store.load()
+        if (not args.customer or r.get("customer_id") == args.customer)
+        and (not args.ticket or r.get("ticket_id") == args.ticket)
+        and (not args.type or r.get("content_type") == args.type)
+    ]
+    if not records:
+        print(f"Nenhuma execução encontrada em {store.path}.")
+        return 0
+    print(f"{'run_id':<13} {'data':<20} {'cliente':<26} {'ticket':<6} {'tipo':<21} {'versão':<6} {'origem':<20} nota")
+    for r in records[-args.limit:]:
+        origin = f"cache de {r['source_run_id']}" if r.get("cache_hit") else "modelo"
+        ev = r.get("evaluation")
+        score = f"{ev['total']}/15" if ev else "-"
+        print(f"{r['run_id']:<13} {r['timestamp'][:19]:<20} {r['customer_id']:<26} {r['ticket_id']:<6} "
+              f"{r['content_type']:<21} {r['prompt_version']:<6} {origin:<20} {score}")
+    return 0
+
+
+def cmd_evaluate(args: argparse.Namespace) -> int:
+    store = _store()
+    record = store.get(args.run_id)
+
+    if args.file:
+        scores = load_scores_file(args.file)
+    else:
+        given = {cid: getattr(args, cid) for cid in CRITERIA if getattr(args, cid)}
+        if given and len(given) != len(CRITERIA):
+            raise UserInputError("informe os três critérios (--clarity, --customer-fit, --actionability) ou nenhum.")
+        scores = {cid: (_parse_score(v[0]), v[1]) for cid, v in given.items()}
+        if not scores:
+            print(render_record(record, store.path))
+            scores = _ask_scores()
+
+    updated = evaluate_run(store, args.run_id, scores, evaluator=args.evaluator)
+    print(render_evaluation(updated["evaluation"]))
+    print(f"\nAvaliação salva no histórico: {store.path} (run_id {args.run_id})")
+    return 0
+
+
+def cmd_compare(args: argparse.Namespace) -> int:
+    store = _store()
+    verdict = args.verdict or ""
+    if args.verdict_file:
+        verdict = args.verdict_file.read_text(encoding="utf-8")
+    comparison = build_comparison(store, args.run_ids, verdict=verdict)
+    print(render_comparison(comparison))
+    path = save_comparison(comparison, args.out or default_comparison_path(store.path.parent, comparison))
+    print(f"\nComparação salva em: {path}")
+    return 0
+
+
 # ------------------------------------------------------------------ execução
 
 def _run(customer, ticket, content_types, versions, use_cache: bool, as_json: bool) -> int:
@@ -157,7 +232,59 @@ def _build_parser() -> argparse.ArgumentParser:
     gen.add_argument("-v", "--version", nargs="+", default=["v2"], help="uma ou mais versões de prompt (padrão: v2)")
     gen.add_argument("--no-cache", action="store_true", help="ignora o cache e chama o modelo de novo")
     gen.add_argument("--json", action="store_true", help="imprime o registro completo em JSON")
+
+    hist = sub.add_parser("history", help="lista as execuções salvas no histórico")
+    hist.add_argument("-c", "--customer", help="filtra por perfil")
+    hist.add_argument("-t", "--ticket", help="filtra por ticket")
+    hist.add_argument("--type", choices=list(CONTENT_TYPES), help="filtra por tipo de conteúdo")
+    hist.add_argument("-n", "--limit", type=int, default=30, help="quantas execuções mostrar (padrão: 30)")
+
+    ev = sub.add_parser("evaluate", help="dá as notas da rubrica (1 a 5) a uma execução")
+    ev.add_argument("run_id", help="id da execução (veja 'history')")
+    for cid, crit in CRITERIA.items():
+        ev.add_argument(
+            f"--{cid.replace('_', '-')}", dest=cid, nargs=2, metavar=("NOTA", "JUSTIFICATIVA"),
+            help=f"{crit.label}: {crit.description}",
+        )
+    ev.add_argument("--file", type=Path, help="JSON com as notas: {\"clarity\": {\"score\": 4, \"justification\": \"...\"}, ...}")
+    ev.add_argument("--evaluator", default="manual", help="quem avaliou (padrão: manual)")
+
+    cmp_ = sub.add_parser("compare", help="compara execuções avaliadas do mesmo cenário (só o prompt muda)")
+    cmp_.add_argument("run_ids", nargs="+", help="ids das execuções (duas versões por tipo de conteúdo)")
+    verdict = cmp_.add_mutually_exclusive_group()
+    verdict.add_argument("--verdict", help="por que uma versão é melhor que a outra")
+    verdict.add_argument("--verdict-file", type=Path, help="arquivo de texto com o veredito")
+    cmp_.add_argument("--out", type=Path, help="onde salvar o JSON da comparação (padrão: outputs/comparisons/)")
     return parser
+
+
+def _store() -> HistoryStore:
+    return HistoryStore(load_settings(require_api_key=False).output_dir / HISTORY_FILENAME)
+
+
+def _parse_score(raw: str) -> int:
+    if not raw.strip().isdigit() or int(raw) not in SCALE:
+        raise UserInputError(f"nota {raw!r} inválida: use um inteiro de 1 a 5.")
+    return int(raw)
+
+
+def _ask_scores() -> dict[str, tuple[int, str]]:
+    print("\nEscala: " + ", ".join(f"{k} {v}" for k, v in SCALE.items()))
+    scores = {}
+    for cid, crit in CRITERIA.items():
+        print(f"\n{crit.label}: {crit.description}")
+        while True:
+            raw = _input("  Nota (1-5): ").strip()
+            if raw.isdigit() and int(raw) in SCALE:
+                break
+            print("  Digite um inteiro de 1 a 5.")
+        while True:
+            why = _input("  Justificativa: ").strip()
+            if why:
+                break
+            print("  A justificativa não pode ficar vazia.")
+        scores[cid] = (int(raw), why)
+    return scores
 
 
 def _pick(items: dict, key: str, label: str):
