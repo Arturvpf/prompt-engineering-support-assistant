@@ -14,7 +14,8 @@
         "properties": {
           "id": {"$ref": "#/$defs/text"},
           "description": {"$ref": "#/$defs/text"},
-          "likelihood": {"$ref": "#/$defs/level"}
+          "likelihood": {"$ref": "#/$defs/level"},
+          "basis": {"type": "string", "enum": ["relato", "inferida"]}
         }
       }
     },

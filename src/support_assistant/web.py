@@ -98,9 +98,12 @@ class App:
         results = []
         with self._lock:
             for version in dict.fromkeys(versions):
-                for content_type in dict.fromkeys(types):
+                produced: dict[str, dict] = {}
+                for content_type in sorted(dict.fromkeys(types), key=list(CONTENT_TYPES).index):
                     try:
-                        record = self.service.generate(customer, ticket, content_type, version, use_cache=use_cache)
+                        record = self.service.generate(customer, ticket, content_type, version,
+                                                       use_cache=use_cache, upstream_records=produced)
+                        produced[content_type] = record
                     except LLMError as exc:
                         results.append({"content_type": content_type, "prompt_version": version, "error": str(exc)})
                         continue

@@ -7,17 +7,19 @@ Este assistente de atendimento recebe um **perfil de cliente** e um **ticket** e
 | Diagnóstico | `diagnosis` | hipóteses, evidências do relato, informações faltantes e conclusão provável |
 | Passo a passo | `resolution_steps` | ações em ordem, com resultado esperado, adaptadas ao nível técnico, estilo e canal |
 | Perguntas de esclarecimento | `clarifying_questions` | até 3 perguntas priorizadas, só o que muda o próximo passo |
-| Resumo visual do fluxo | `flow_summary` | fluxograma ASCII, decisões sim/não e quando escalar |
+| Resumo visual do fluxo | `flow_summary` | fluxograma ASCII, decisões sim/não e quando escalar (na v3 o modelo devolve um grafo e o código desenha) |
 
 Cada execução é salva em JSON com data/hora, versão do prompt, modelo e configurações. Uma execução equivalente é reaproveitada do cache. As versões de prompt podem ser comparadas com uma rubrica fixa: clareza, adequação ao cliente e acionabilidade, com notas de 1 a 5.
+
+Há três versões de prompt, cada uma guiada pela comparação anterior: v1 (baseline) → v2 (38 → 49 pontos) → v3 (49 → 51, padrão). Na v3, o diagnóstico levanta também causas que o cliente não mencionou, e o passo a passo, as perguntas e o fluxograma recebem esse diagnóstico (prompts encadeados).
 
 Também há:
 - uma interface web local;
 - validação da saída com JSON Schema;
 - log de eventos com tempo, tokens e cache hit;
-- 89 testes automatizados que rodam sem chamar a API.
+- 110 testes automatizados que rodam sem chamar a API.
 
-As decisões de prompt, a comparação v1 × v2 e as limitações estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md).
+As decisões de prompt, as comparações v1 × v2 e v2 × v3 e as limitações estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md).
 
 ---
 
@@ -103,14 +105,14 @@ A saída aparece formatada no terminal, junto com o caminho do JSON salvo e o `r
 # perfis, tickets, tipos de conteúdo e versões disponíveis
 python main.py list
 
-# os 4 tipos para um cliente e um ticket de exemplo, com o prompt v2 (padrão)
+# os 4 tipos para um cliente e um ticket de exemplo, com o prompt v3 (padrão)
 python main.py generate -c marta-leigo-telefone -t T001
 
 # um tipo, com um ticket novo digitado na hora
 python main.py generate -c rafael-avancado-chat --text "A API retorna 500 ao criar pedido desde ontem" --type diagnosis
 
 # o mesmo cenário com duas versões de prompt (para comparar)
-python main.py generate -c joao-leigo-chat -t T004 --type all -v v1 v2
+python main.py generate -c joao-leigo-chat -t T004 --type all -v v2 v3
 
 # ignorar o cache / imprimir o registro completo em JSON
 python main.py generate -c joao-leigo-chat -t T004 --type diagnosis --no-cache
@@ -162,6 +164,12 @@ OUTPUT_DIR=demo python main.py compare a2cf94288d19 524bbca9b910 39d4ea594be4 9c
 ```
 
 O resultado é a mesma tabela de `samples/comparison_v1_v2_joao-leigo-chat_T004.json`: v1 = 38, v2 = 49.
+
+Para a comparação v2 × v3, use `samples/history_comparison_v2_v3_joao-leigo-chat_T004.json` do mesmo jeito, com estes `run_id`. O resultado é v2 = 49, v3 = 51:
+
+```bash
+python main.py compare 524bbca9b910 bedf735a659b 9c2cf899bd60 4e4acaa456aa 62960c793a80 60ff029c7199 a050cc3c5fa8 b767498dbb1c --verdict "..."
+```
 
 ### Interface web
 
@@ -229,8 +237,9 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-São 89 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
-- montagem do prompt nas duas versões, incluindo regras de estilo, delimitação do ticket e o gabarito fora do prompt;
+São 110 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
+- montagem do prompt nas três versões, incluindo regras de estilo, delimitação do ticket, encadeamento do diagnóstico na v3 e o gabarito fora do prompt;
+- fluxograma da v3: validação do grafo (nó solto, ligação quebrada, laço sem saída, decisão sem efeito) e desenho alinhado;
 - cache (hit, miss, invalidação por versão e por parâmetros, `--no-cache`, hit sem chave);
 - validação por schema, incluindo todas as saídas reais de `samples/`;
 - correção de JSON, retry com backoff e histórico;
@@ -248,29 +257,30 @@ data/
   customers.json             5 perfis: nível técnico, estilo, canal e contexto
   tickets.json               4 tickets de exemplo (missing_on_purpose é gabarito, nunca vai ao prompt)
 prompts/
-  v1/  v2/                   uma pasta por versão; manifest.json descreve a versão e a hipótese
+  v1/  v2/  v3/              uma pasta por versão; manifest.json descreve a versão, a hipótese e, na v3, as dependências
     persona.md               mensagem de sistema (papel, responsabilidades, limites, formato)
     context.md               perfil + ticket (template com $variaveis)
     <tipo>.md                tarefa e formato JSON de cada tipo de conteúdo
-    style_rules.json         (v2) regras de escrita por nível, estilo e canal
-schemas/                     JSON Schema de cada tipo de conteúdo (vale para v1 e v2)
+    style_rules.json         (v2, v3) regras de escrita por nível, estilo e canal
+schemas/                     JSON Schema de cada tipo de conteúdo (vale para todas as versões)
 src/support_assistant/
   data_loader.py             carrega e valida perfis e tickets
   content_types.py           os 4 tipos e os campos obrigatórios de cada um
-  prompt_engine.py           monta system + user a partir da versão, do perfil e do ticket
+  prompt_engine.py           monta system + user a partir da versão, do perfil, do ticket e do diagnóstico (v3)
   config.py                  lê o .env (provedor, modelo, parâmetros fixos)
   llm_client.py              cliente Gemini, retry com backoff e classificação de erros
   openrouter_client.py       cliente OpenRouter (API compatível com OpenAI, via httpx)
   generators.py              uma função por tipo; valida o JSON e tenta 1 correção se vier inválido
+  flowchart.py               valida o grafo do fluxograma (v3) e desenha o ASCII e os pontos de decisão
   output_validation.py       extrai o JSON da resposta, valida contra o schema e gera avisos de coerência
   history.py                 histórico em JSON com gravação atômica
-  service.py                 cache + geração + gravação (a camada que a CLI e a web usam)
+  service.py                 cache + encadeamento + geração + gravação (a camada que a CLI e a web usam)
   evaluation.py              rubrica, avaliação e comparação justa entre versões
   observability.py           log de eventos em JSON lines e estatísticas do histórico
   formatting.py              saída legível no terminal
   cli.py                     comandos interactive, list, generate, history, evaluate, compare, stats, web
   web.py, static/index.html  interface web local (biblioteca padrão)
-samples/                     exemplos de saída e a comparação v1 x v2 completa
+samples/                     exemplos de saída e as comparações v1 x v2 e v2 x v3 completas
 tests/                       testes com pytest e cliente LLM falso
 ```
 
@@ -280,7 +290,11 @@ tests/                       testes com pytest e cliente LLM falso
 perfil + ticket + tipo + versão
         |
         v
-PromptEngine.build()  ->  system (persona.md) + user (context.md + <tipo>.md)
+v3: passo a passo, perguntas e fluxograma precisam do diagnóstico
+        +-- pega o da mesma rodada, ou do cache, ou gera antes
+        |
+        v
+PromptEngine.build()  ->  system (persona.md) + user (context.md + resumo do diagnóstico + <tipo>.md)
         |
         v
 chave de cache = sha256(prompt renderizado + tipo + versão + provedor/modelo/parâmetros)
@@ -292,6 +306,9 @@ chave de cache = sha256(prompt renderizado + tipo + versão + provedor/modelo/pa
 chamada ao LLM (JSON mode, temperatura 0.2, seed 42, retry em erro temporário)
         |
         v
+v3, fluxograma: valida o grafo e desenha o ASCII e os pontos de decisão
+        |
+        v
 valida contra schemas/<tipo>.schema.json  --inválido--> reenvia com o erro anexado (1 vez)
         |
         v
@@ -301,13 +318,14 @@ e mostra no terminal (ou na web)
 
 ### O que vai em cada registro do histórico
 
-`run_id`, `timestamp`, `customer_id` e `customer`, `ticket_id` e `ticket`, `content_type`, `prompt_version`, `prompt_fingerprint`, `provider`, `model`, `generation_params`, `cache_key`, `cache_hit`, `source_run_id`, `output`, `warnings`, `metrics` (tentativas, latência, tokens, finish_reason) e `evaluation` (notas e justificativas da rubrica).
+`run_id`, `timestamp`, `customer_id` e `customer`, `ticket_id` e `ticket`, `content_type`, `prompt_version`, `prompt_fingerprint`, `provider`, `model`, `generation_params`, `cache_key`, `upstream` (na v3, o `run_id` do diagnóstico usado no prompt), `cache_hit`, `source_run_id`, `output`, `warnings`, `metrics` (tentativas, latência, tokens, finish_reason) e `evaluation` (notas e justificativas da rubrica).
 
 ### Como criar uma versão nova de prompt
 
-1. Copie `prompts/v2` para `prompts/v3`.
-2. Edite os arquivos e descreva no `manifest.json` o que mudou e qual a hipótese.
-3. Rode `python main.py generate -c <perfil> -t <ticket> -v v2 v3`.
+1. Copie `prompts/v3` para `prompts/v4`.
+2. Edite os arquivos e descreva no `manifest.json` o que mudou, qual a hipótese e de qual comparação veio a ideia (`evidence`). Para encadear tarefas, use `depends_on`; a saída da dependência fica disponível no template como `$<tipo>_context`.
+3. Rode `python main.py generate -c <perfil> -t <ticket> -v v3 v4`, avalie com `evaluate` e compare com `compare`.
+4. Para torná-la padrão, mude `DEFAULT_VERSION` em `src/support_assistant/prompt_engine.py`.
 
 A versão aparece sozinha no `list` e nos menus. O cache não mistura versões, porque a versão e o prompt renderizado fazem parte da chave.
 
@@ -317,7 +335,7 @@ A versão aparece sozinha no `list` e nos menus. O cache não mistura versões, 
 
 - As chaves ficam só no `.env`, que está no `.gitignore`. O `.env.example` não tem valores reais. A configuração nunca imprime a chave.
 - O relato do cliente vai entre `<ticket>` e `</ticket>`, e a persona manda tratá-lo como dado. É uma proteção básica contra prompt injection, não uma garantia.
-- O prompt v2 proíbe pedir senhas, códigos de verificação, dados de cartão ou documentos.
+- Os prompts v2 e v3 proíbem pedir senhas, códigos de verificação, dados de cartão ou documentos; a v3 deixa explícito que isso vale também para o encaminhamento ao suporte.
 - O gabarito `missing_on_purpose` dos tickets não entra no prompt nem no histórico.
 
 ## Limitações conhecidas
@@ -325,4 +343,4 @@ A versão aparece sozinha no `list` e nos menus. O cache não mistura versões, 
 - A avaliação da rubrica é manual: a nota é uma opinião justificada, não uma métrica automática.
 - Os modelos gratuitos têm limite diário e podem responder 429. Nesse caso, troque `OPENROUTER_MODEL` por outro modelo `:free`.
 - Mesmo com seed e temperatura baixa, o provedor pode variar a resposta. O cache garante a reprodução exata só de uma execução já feita.
-- Outras limitações das respostas estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md#7-limitações).
+- Outras limitações das respostas estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md#8-limitações).

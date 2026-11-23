@@ -68,9 +68,24 @@ class AssistantService:
         content_type: str,
         version: str,
         use_cache: bool = True,
+        upstream_records: dict[str, dict] | None = None,
     ) -> dict:
-        """Gera (ou reaproveita do cache) um conteúdo e devolve o registro salvo no histórico."""
-        prompt = self.engine.build(content_type, customer, ticket, version)
+        """Gera (ou reaproveita do cache) um conteúdo e devolve o registro salvo no histórico.
+
+        Se a versão encadeia tarefas (ex.: v3, em que o passo a passo recebe o
+        diagnóstico), a saída da etapa anterior vem de ``upstream_records``
+        (registros gerados nesta mesma rodada) ou, se não vier, do cache; sem
+        cache, a etapa anterior é gerada antes.
+        """
+        upstream, upstream_ids = {}, {}
+        for dep in self.engine.dependencies(version, content_type):
+            dep_record = (upstream_records or {}).get(dep)
+            if dep_record is None or dep_record.get("prompt_version") != version:
+                dep_record = self._resolve_dependency(customer, ticket, dep, version)
+            upstream[dep] = dep_record["output"]
+            upstream_ids[dep] = dep_record.get("source_run_id") or dep_record["run_id"]
+
+        prompt = self.engine.build(content_type, customer, ticket, version, upstream)
         params = self.settings.generation_params()
         key = cache_key(prompt, params)
 
@@ -86,6 +101,8 @@ class AssistantService:
             "model": params["model"],
             "generation_params": params,
             "cache_key": key,
+            # run_id da geração real de cada etapa anterior usada no prompt (v3+).
+            "upstream": upstream_ids or None,
         }
 
         scope = {"customer_id": customer.id, "ticket_id": ticket.id, "content_type": content_type,
@@ -108,7 +125,7 @@ class AssistantService:
             return record
 
         try:
-            result = GENERATORS[content_type](self.client, self.engine, customer, ticket, version)
+            result = GENERATORS[content_type](self.client, self.engine, customer, ticket, version, upstream)
         except LLMError as exc:
             log_event("generation_failed", logging.ERROR, error=type(exc).__name__,
                       message=str(exc)[:300], **scope)
@@ -136,6 +153,15 @@ class AssistantService:
                   total_tokens=usage.get("total_tokens"), attempts=result.attempts,
                   warnings=len(result.warnings), **scope)
         return record
+
+    def _resolve_dependency(self, customer: CustomerProfile, ticket: Ticket, dep: str, version: str) -> dict:
+        """Saída de uma etapa anterior: do cache, sem novo registro, ou gerada agora (e registrada)."""
+        if not self.engine.dependencies(version, dep):
+            prompt = self.engine.build(dep, customer, ticket, version)
+            cached = self.store.find_cached(cache_key(prompt, self.settings.generation_params()))
+            if cached is not None:
+                return cached
+        return self.generate(customer, ticket, dep, version)
 
 
 def _ticket_snapshot(ticket: Ticket) -> dict:

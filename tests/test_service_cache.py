@@ -79,3 +79,33 @@ def test_events_are_logged(tmp_path, service, customers, tickets):
     assert [e["event"] for e in events] == ["generation", "cache_hit"]
     assert events[0]["total_tokens"] == 100 and events[1]["tokens_saved"] == 100
     assert "test-key" not in log_path.read_text(encoding="utf-8")
+
+
+def test_v3_uses_the_diagnosis_generated_in_the_same_run(service, fake_client, customers, tickets):
+    joao, t004 = customers["joao-leigo-chat"], tickets["T004"]
+    produced = {}
+    for content_type in ("diagnosis", "resolution_steps", "flow_summary"):
+        produced[content_type] = service.generate(joao, t004, content_type, "v3", upstream_records=produced)
+    assert len(fake_client.calls) == 3, "o diagnóstico não é gerado de novo"
+    diagnosis_id = produced["diagnosis"]["run_id"]
+    assert produced["resolution_steps"]["upstream"] == {"diagnosis": diagnosis_id}
+    assert produced["diagnosis"]["upstream"] is None
+    assert "Verificação do novo aparelho" in fake_client.calls[1][1]
+    assert "ascii_flowchart" in produced["flow_summary"]["output"]
+
+
+def test_v3_single_type_takes_the_diagnosis_from_the_cache(service, fake_client, customers, tickets):
+    joao, t004 = customers["joao-leigo-chat"], tickets["T004"]
+    diagnosis = service.generate(joao, t004, "diagnosis", "v3")
+    steps = service.generate(joao, t004, "resolution_steps", "v3")
+    assert len(fake_client.calls) == 2
+    assert steps["upstream"] == {"diagnosis": diagnosis["run_id"]}
+    assert len(service.store.load()) == 2, "buscar o diagnóstico no cache não cria registro"
+
+
+def test_v3_single_type_without_diagnosis_generates_it_first(service, fake_client, customers, tickets):
+    steps = service.generate(customers["joao-leigo-chat"], tickets["T004"], "clarifying_questions", "v3")
+    records = service.store.load()
+    assert [r["content_type"] for r in records] == ["diagnosis", "clarifying_questions"]
+    assert steps["upstream"] == {"diagnosis": records[0]["run_id"]}
+    assert len(fake_client.calls) == 2
