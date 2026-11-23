@@ -42,8 +42,20 @@ VALID_OUTPUTS = {
     },
 }
 
+# v3+: o modelo devolve o grafo e o código desenha o fluxograma.
+FLOW_GRAPH_OUTPUT = {
+    "flow": {"nodes": [
+        {"id": "N1", "type": "start", "text": "Não entra no app", "next": "N2"},
+        {"id": "N2", "type": "decision", "text": "Pede código de verificação?", "yes": "N3", "no": "N4"},
+        {"id": "N3", "type": "end", "text": "RESOLVIDO"},
+        {"id": "N4", "type": "end", "text": "ESCALAR PARA N2"},
+    ]},
+    "escalation": {"when": "Se não entrar", "attach": ["print"]},
+}
+
 # Campo que identifica, no texto do prompt, qual tipo de conteúdo foi pedido.
 _MARKERS = {
+    '"flow": {': "flow_graph",
     "ascii_flowchart": "flow_summary",
     "hypotheses": "diagnosis",
     '"questions"': "clarifying_questions",
@@ -68,7 +80,11 @@ class FakeClient:
 
     def generate(self, system: str, user: str) -> LLMResponse:
         self.calls.append((system, user))
-        text = self.responses.pop(0) if self.responses else json.dumps(VALID_OUTPUTS[detect_content_type(user)])
+        if self.responses:
+            text = self.responses.pop(0)
+        else:
+            kind = detect_content_type(user)
+            text = json.dumps(FLOW_GRAPH_OUTPUT if kind == "flow_graph" else VALID_OUTPUTS[kind])
         return LLMResponse(text=text, model="fake-model", finish_reason=self.finish_reason,
                            usage={"prompt_tokens": 80, "output_tokens": 20, "total_tokens": 100}, latency_ms=5)
 

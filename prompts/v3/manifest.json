@@ -1,0 +1,21 @@
+{
+  "version": "v3",
+  "created_at": "2026-11-22",
+  "based_on": "v2",
+  "description": "v2 + correções guiadas pela comparação v1 × v2: hipóteses inferidas além do relato, prompts encadeados a partir do diagnóstico, passos ordenados por risco e fluxograma pedido como grafo e desenhado pelo código.",
+  "depends_on": {
+    "resolution_steps": ["diagnosis"],
+    "clarifying_questions": ["diagnosis"],
+    "flow_summary": ["diagnosis"]
+  },
+  "changes_from_previous": [
+    "Persona: pode levantar causas que o cliente não mencionou, sempre marcadas como suposição e com forma de confirmar; pode perguntar se um código chegou, nunca qual é; texto todo em português.",
+    "Diagnóstico: campo 'basis' (relato ou inferida), pelo menos uma hipótese inferida a partir do que mudou na situação do cliente, e hipótese inferida nunca com confiança alta.",
+    "Encadeamento: passo a passo, perguntas e fluxograma recebem um resumo do diagnóstico (hipóteses, o que falta, conclusão) e trabalham sobre as mesmas hipóteses.",
+    "Perguntas: cada uma deve separar hipóteses do diagnóstico; 'reason' diz o que a resposta confirma ou descarta; não perguntar o que o relato já mostra que funciona.",
+    "Passo a passo: ordem por risco (verificação sem risco, ação reversível, ação destrutiva com aviso), sem passos genéricos e sem repetir o encaminhamento como passo.",
+    "Fluxograma: o modelo devolve um grafo (nós start, action, decision, end) com regras de lógica explícitas; o código valida o grafo e desenha o ASCII e os pontos de decisão."
+  ],
+  "hypothesis": "Na comparação v1 × v2, nenhuma versão levantou a verificação do novo aparelho no T004, os 4 tipos não conversavam entre si (cada um gerado isoladamente) e o fluxograma teve a menor nota de clareza. Pedir uma hipótese inferida e passar o diagnóstico para as outras tarefas deve melhorar a acionabilidade de forma consistente nos 4 tipos; tirar o desenho do modelo deve melhorar a clareza do fluxograma.",
+  "evidence": "samples/comparison_v1_v2_joao-leigo-chat_T004.json e a seção 'O que a comparação também mostrou' de PROMPT_ENGINEERING_NOTES.md"
+}

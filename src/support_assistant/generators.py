@@ -12,6 +12,7 @@ import logging
 from dataclasses import dataclass, field
 
 from .data_loader import CustomerProfile, Ticket
+from .flowchart import complete_flow_output
 from .llm_client import LLMClient, LLMError, LLMResponse
 from .observability import log_event
 from .output_validation import OutputValidationError, parse_json_output, validate_output
@@ -41,27 +42,27 @@ class GenerationResult:
 
 
 def generate_diagnosis(client: LLMClient, engine: PromptEngine, customer: CustomerProfile,
-                       ticket: Ticket, version: str) -> GenerationResult:
+                       ticket: Ticket, version: str, upstream: dict | None = None) -> GenerationResult:
     """Hipóteses, evidências, dados faltantes e conclusão provável."""
-    return _generate("diagnosis", client, engine, customer, ticket, version)
+    return _generate("diagnosis", client, engine, customer, ticket, version, upstream)
 
 
 def generate_resolution_steps(client: LLMClient, engine: PromptEngine, customer: CustomerProfile,
-                              ticket: Ticket, version: str) -> GenerationResult:
+                              ticket: Ticket, version: str, upstream: dict | None = None) -> GenerationResult:
     """Passo a passo adaptado ao nível técnico, ao estilo e ao canal."""
-    return _generate("resolution_steps", client, engine, customer, ticket, version)
+    return _generate("resolution_steps", client, engine, customer, ticket, version, upstream)
 
 
 def generate_clarifying_questions(client: LLMClient, engine: PromptEngine, customer: CustomerProfile,
-                                  ticket: Ticket, version: str) -> GenerationResult:
+                                  ticket: Ticket, version: str, upstream: dict | None = None) -> GenerationResult:
     """Perguntas priorizadas para coletar só o necessário."""
-    return _generate("clarifying_questions", client, engine, customer, ticket, version)
+    return _generate("clarifying_questions", client, engine, customer, ticket, version, upstream)
 
 
 def generate_flow_summary(client: LLMClient, engine: PromptEngine, customer: CustomerProfile,
-                          ticket: Ticket, version: str) -> GenerationResult:
+                          ticket: Ticket, version: str, upstream: dict | None = None) -> GenerationResult:
     """Fluxograma ASCII e pontos de decisão do atendimento."""
-    return _generate("flow_summary", client, engine, customer, ticket, version)
+    return _generate("flow_summary", client, engine, customer, ticket, version, upstream)
 
 
 GENERATORS = {
@@ -73,8 +74,9 @@ GENERATORS = {
 
 
 def _generate(content_type: str, client: LLMClient, engine: PromptEngine,
-              customer: CustomerProfile, ticket: Ticket, version: str) -> GenerationResult:
-    prompt = engine.build(content_type, customer, ticket, version)
+              customer: CustomerProfile, ticket: Ticket, version: str,
+              upstream: dict | None = None) -> GenerationResult:
+    prompt = engine.build(content_type, customer, ticket, version, upstream)
     user = prompt.user
     last_error = ""
 
@@ -86,6 +88,8 @@ def _generate(content_type: str, client: LLMClient, engine: PromptEngine,
                     "resposta cortada pelo limite de tokens; seja mais conciso"
                 )
             output = parse_json_output(response.text)
+            if content_type == "flow_summary":
+                output = complete_flow_output(output)  # v3+: grafo -> ASCII desenhado pelo código
             warnings = validate_output(content_type, output)
         except OutputValidationError as exc:
             last_error = str(exc)

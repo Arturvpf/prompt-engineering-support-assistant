@@ -76,6 +76,16 @@ def test_empty_string_reports_once():
     assert str(exc.value).count("if_not_resolved") == 1
 
 
+def test_repeated_step_is_a_warning():
+    steps = copy.deepcopy(VALID_OUTPUTS["resolution_steps"])
+    steps["steps"] = [
+        {"number": 1, "action": "Desinstale o app e instale de novo.", "expected_result": "ok"},
+        {"number": 2, "action": "Toque em Esqueci minha senha", "expected_result": "ok"},
+        {"number": 3, "action": "Desinstale o app e instale de novo. Isso apaga os dados.", "expected_result": "ok"},
+    ]
+    assert validate_output("resolution_steps", steps) == ["passo 3 repete a ação do passo 1"]
+
+
 def test_coherence_problems_are_warnings_not_errors():
     diag = copy.deepcopy(VALID_OUTPUTS["diagnosis"])
     diag["probable_conclusion"]["hypothesis_id"] = "H9"

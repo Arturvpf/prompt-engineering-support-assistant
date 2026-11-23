@@ -19,6 +19,29 @@
         }
       }
     },
+    "flow": {
+      "description": "v3+: grafo de decisão devolvido pelo modelo; ascii_flowchart e decision_points são desenhados a partir dele",
+      "type": "object",
+      "required": ["nodes"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["id", "type", "text"],
+            "properties": {
+              "id": {"$ref": "#/$defs/text"},
+              "type": {"type": "string", "enum": ["start", "action", "decision", "end"]},
+              "text": {"$ref": "#/$defs/text"},
+              "next": {"type": "string"},
+              "yes": {"type": "string"},
+              "no": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
     "escalation": {
       "type": "object",
       "properties": {

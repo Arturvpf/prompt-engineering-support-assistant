@@ -98,8 +98,9 @@ def render_output(content_type: str, output: dict, wrap: bool = True) -> str:
 def _diagnosis(o: dict) -> str:
     out = ["HIPÓTESES"]
     for h in o.get("hypotheses", []):
-        likelihood = f" [{h['likelihood']}]" if h.get("likelihood") else ""
-        out.append(_item(f"{h.get('id', '-')}{likelihood}", h.get("description", "")))
+        tags = ", ".join(t for t in (h.get("likelihood"), "inferida" if h.get("basis") == "inferida" else "") if t)
+        tags = f" [{tags}]" if tags else ""
+        out.append(_item(f"{h.get('id', '-')}{tags}", h.get("description", "")))
 
     out += ["", "EVIDÊNCIAS"]
     for e in o.get("evidence", []):

@@ -137,6 +137,18 @@ def _warn_diagnosis(d: dict) -> list[str]:
     return warnings
 
 
+def _warn_steps(d: dict) -> list[str]:
+    seen: dict[str, int] = {}
+    warnings = []
+    for i, step in enumerate(d.get("steps", []), start=1):
+        action = " ".join(str(step.get("action", "")).lower().split())
+        key = action.split(".")[0]  # ignora frases de aviso acrescentadas no fim
+        if key and key in seen:
+            warnings.append(f"passo {i} repete a ação do passo {seen[key]}")
+        seen.setdefault(key, i)
+    return warnings
+
+
 def _warn_questions(d: dict) -> list[str]:
     priorities = [q.get("priority") for q in d.get("questions", []) if q.get("priority") is not None]
     if len(priorities) != len(set(priorities)):
@@ -159,6 +171,7 @@ def _warn_flow(d: dict) -> list[str]:
 
 _WARNINGS = {
     "diagnosis": _warn_diagnosis,
+    "resolution_steps": _warn_steps,
     "clarifying_questions": _warn_questions,
     "flow_summary": _warn_flow,
 }

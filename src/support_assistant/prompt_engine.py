@@ -37,6 +37,9 @@ from .data_loader import CustomerProfile, Ticket
 
 PROMPTS_DIR = Path(__file__).resolve().parents[2] / "prompts"
 
+# Versão usada quando nenhuma é escolhida: a que ganhou a última comparação (v2 x v3).
+DEFAULT_VERSION = "v3"
+
 
 class PromptError(ValueError):
     """Versão de prompt inexistente ou template incompleto."""
@@ -72,6 +75,20 @@ class PromptEngine:
     def manifest(self, version: str) -> dict:
         return json.loads(self._read(version, "manifest.json"))
 
+    def dependencies(self, version: str, content_type: str) -> tuple[str, ...]:
+        """Tipos cuja saída a tarefa precisa receber antes (encadeamento declarado no manifest).
+
+        Ex.: na v3, ``"depends_on": {"resolution_steps": ["diagnosis"]}`` faz o passo a
+        passo receber as hipóteses do diagnóstico em ``$diagnosis_context``.
+        """
+        chain = self.manifest(version).get("depends_on") or {}
+        deps = tuple(chain.get(content_type, ()))
+        for dep in deps:
+            get_content_type(dep)
+            if dep == content_type:
+                raise PromptError(f"{version}: '{content_type}' não pode depender de si mesmo")
+        return deps
+
     # ------------------------------------------------------------- montagem
 
     def build(
@@ -80,9 +97,18 @@ class PromptEngine:
         customer: CustomerProfile,
         ticket: Ticket,
         version: str,
+        upstream: dict[str, dict] | None = None,
     ) -> PromptPackage:
+        """Monta o prompt. ``upstream`` traz as saídas dos tipos de que esta tarefa depende."""
         get_content_type(content_type)  # valida o tipo
         variables = self._variables(customer, ticket, version)
+        upstream = upstream or {}
+        deps = self.dependencies(version, content_type)
+        missing = [d for d in deps if d not in upstream]
+        if missing:
+            raise PromptError(f"{version}/{content_type} depende da saída de {', '.join(missing)}, que não foi informada")
+        for dep in deps:
+            variables[f"{dep}_context"] = upstream_context(dep, upstream[dep])
 
         system = self._render(version, "persona.md", variables)
         context = self._render(version, "context.md", variables)
@@ -95,8 +121,9 @@ class PromptEngine:
             user=f"{context}\n\n{task}",
         )
 
-    def build_all(self, customer: CustomerProfile, ticket: Ticket, version: str) -> list[PromptPackage]:
-        return [self.build(ct, customer, ticket, version) for ct in CONTENT_TYPES]
+    def build_all(self, customer: CustomerProfile, ticket: Ticket, version: str,
+                  upstream: dict[str, dict] | None = None) -> list[PromptPackage]:
+        return [self.build(ct, customer, ticket, version, upstream) for ct in CONTENT_TYPES]
 
     # ------------------------------------------------------------- internos
 
@@ -155,3 +182,26 @@ class PromptEngine:
         if not version or "/" in version or "\\" in version or version.startswith("."):
             raise PromptError(f"Nome de versão inválido: {version!r}")
         return self.prompts_dir / version / filename
+
+
+def upstream_context(content_type: str, output: dict) -> str:
+    """Resumo curto da saída de uma etapa anterior, para entrar no prompt da próxima.
+
+    Só o que a próxima tarefa usa: as hipóteses (com a marca de inferida), o que
+    falta saber e a conclusão. Evidências e textos ao cliente ficam de fora para
+    não inflar o prompt.
+    """
+    if content_type != "diagnosis":
+        return json.dumps(output, ensure_ascii=False)
+    lines = ["Hipóteses:"]
+    for h in output.get("hypotheses", []):
+        tags = ", ".join(t for t in (h.get("likelihood"), "inferida" if h.get("basis") == "inferida" else "") if t)
+        lines.append(f"- {h.get('id', '?')}{f' [{tags}]' if tags else ''}: {h.get('description', '')}")
+    missing = [m.get("item", "") for m in output.get("missing_information", []) if m.get("item")]
+    if missing:
+        lines.append("Informações que faltam: " + "; ".join(missing))
+    c = output.get("probable_conclusion") or {}
+    if c:
+        lines.append(f"Conclusão provável: {c.get('hypothesis_id', '?')} (confiança {c.get('confidence', '?')}). "
+                     f"Como confirmar: {c.get('how_to_confirm', '')}".rstrip())
+    return "\n".join(lines)

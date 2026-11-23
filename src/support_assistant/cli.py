@@ -4,13 +4,13 @@ Uso rápido::
 
     python main.py                       # modo interativo (menus)
     python main.py list                  # perfis, tickets, versões e tipos disponíveis
-    python main.py generate -c marta-leigo-telefone -t T001 --type all --version v2
+    python main.py generate -c marta-leigo-telefone -t T001 --type all --version v3
     python main.py generate -c rafael-avancado-chat --text "API retorna 500 ao criar pedido" --type diagnosis
-    python main.py generate -c joao-leigo-chat -t T004 --type resolution_steps --version v1 v2
+    python main.py generate -c joao-leigo-chat -t T004 --type resolution_steps --version v2 v3
     python main.py history -c joao-leigo-chat -t T004            # execuções salvas (run_id)
     python main.py evaluate RUN_ID                              # dá as notas da rubrica (pergunta cada uma)
     python main.py evaluate RUN_ID --clarity 4 "..." --customer-fit 3 "..." --actionability 5 "..."
-    python main.py compare RUN_V1 RUN_V2 --verdict "por que a v2 é melhor..."
+    python main.py compare RUN_V2 RUN_V3 --verdict "por que a v3 é melhor..."
     python main.py stats                                        # cache, tokens, latência
     python main.py web                                          # interface web em http://127.0.0.1:8000
 """
@@ -39,7 +39,7 @@ from .formatting import render_comparison, render_evaluation, render_record
 from .history import HistoryError, HistoryStore
 from .llm_client import LLMError
 from .observability import configure_logging, history_stats
-from .prompt_engine import PromptEngine, PromptError
+from .prompt_engine import DEFAULT_VERSION, PromptEngine, PromptError
 from .service import HISTORY_FILENAME, AssistantService
 
 EXPECTED_ERRORS = (ConfigError, DataValidationError, PromptError, LLMError, HistoryError, EvaluationError)
@@ -226,11 +226,14 @@ def _run(customer, ticket, content_types, versions, use_cache: bool, as_json: bo
     service = AssistantService(load_settings(require_api_key=False))
     failures = 0
     for version in versions:
+        produced: dict[str, dict] = {}  # v3+: o diagnóstico desta rodada alimenta os outros tipos
         for content_type in content_types:
             label = CONTENT_TYPES[content_type].label
             print(f"\n> Gerando {label} com o prompt {version}...", file=sys.stderr)
             try:
-                record = service.generate(customer, ticket, content_type, version, use_cache=use_cache)
+                record = service.generate(customer, ticket, content_type, version, use_cache=use_cache,
+                                          upstream_records=produced)
+                produced[content_type] = record
             except LLMError as exc:
                 # Falha em um tipo não impede os outros (ex.: modelo devolveu JSON inválido duas vezes).
                 failures += 1
@@ -260,7 +263,8 @@ def _build_parser() -> argparse.ArgumentParser:
     source.add_argument("-t", "--ticket", help="id de um ticket de exemplo (veja 'list')")
     source.add_argument("--text", help="descrição de um ticket novo")
     gen.add_argument("--type", default="all", choices=[*CONTENT_TYPES, "all"], help="tipo de conteúdo (padrão: all)")
-    gen.add_argument("-v", "--version", nargs="+", default=["v2"], help="uma ou mais versões de prompt (padrão: v2)")
+    gen.add_argument("-v", "--version", nargs="+", default=[DEFAULT_VERSION],
+                     help=f"uma ou mais versões de prompt (padrão: {DEFAULT_VERSION})")
     gen.add_argument("--no-cache", action="store_true", help="ignora o cache e chama o modelo de novo")
     gen.add_argument("--json", action="store_true", help="imprime o registro completo em JSON")
 
