@@ -5,8 +5,5 @@
       "maxDuration": 60,
       "includeFiles": "{src,prompts,schemas,data,samples}/**"
     }
-  },
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index" }
-  ]
+  }
 }

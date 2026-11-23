@@ -1,8 +1,8 @@
 """Ponto de entrada da interface web na Vercel (funções Python).
 
-A Vercel procura, em ``api/*.py``, uma classe ``handler`` derivada de
-``BaseHTTPRequestHandler``. É exatamente o que ``web.make_handler`` devolve, então
-a mesma aplicação roda localmente (``python main.py web``), em container e aqui.
+A Vercel carrega ``api.index:app`` e espera uma aplicação WSGI ou ASGI. ``app`` é o
+adaptador WSGI de ``web.make_wsgi_app``, que usa o mesmo roteador (``web.dispatch``)
+do servidor local: a aplicação é a mesma em ``python main.py web``, no container e aqui.
 
 Diferenças da plataforma, tratadas por variáveis de ambiente com padrões seguros:
 
@@ -37,10 +37,10 @@ for name, value in {
 from support_assistant.config import load_settings, load_web_settings  # noqa: E402
 from support_assistant.observability import configure_logging  # noqa: E402
 from support_assistant.service import AssistantService  # noqa: E402
-from support_assistant.web import App, make_handler  # noqa: E402
+from support_assistant.web import App, make_wsgi_app  # noqa: E402
 
 _settings = load_settings(require_api_key=False)
 configure_logging(_settings.output_dir / "logs", _settings.log_level)  # eventos vão para os logs da Vercel
-app = App(AssistantService(_settings), web=load_web_settings())
+assistant = App(AssistantService(_settings), web=load_web_settings())
 
-handler = make_handler(app)
+app = make_wsgi_app(assistant)
