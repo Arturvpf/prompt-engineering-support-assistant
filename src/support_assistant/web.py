@@ -15,6 +15,9 @@ que duas requisições não gravem o histórico ao mesmo tempo.
 from __future__ import annotations
 
 import json
+import os
+import socket
+import sys
 import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -193,9 +196,37 @@ def make_handler(app: App):
     return Handler
 
 
+class ExclusiveHTTPServer(ThreadingHTTPServer):
+    """Servidor que falha se a porta já estiver em uso, em vez de dividi-la com outro programa.
+
+    O HTTPServer padrão liga SO_REUSEADDR. No Windows essa opção deixa dois programas
+    escutarem na mesma porta, e o navegador cai no programa errado sem nenhum erro.
+    Lá usamos SO_EXCLUSIVEADDRUSE; nos outros sistemas, SO_REUSEADDR só permite
+    reaproveitar uma porta em TIME_WAIT e continua seguro.
+    """
+
+    daemon_threads = True
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self) -> None:
+        if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+def make_server(app: App, host: str, port: int) -> ExclusiveHTTPServer:
+    return ExclusiveHTTPServer((host, port), make_handler(app))
+
+
 def serve(host: str = "127.0.0.1", port: int = 8000) -> int:
     app = App()
-    server = ThreadingHTTPServer((host, port), make_handler(app))
+    try:
+        server = make_server(app, host, port)
+    except OSError as exc:
+        print(f"Não foi possível abrir a interface em http://{host}:{port}: a porta está em uso por outro "
+              f"programa ou bloqueada ({exc.strerror or exc}).\n"
+              f"Escolha outra porta, por exemplo: python main.py web --port {port + 1}", file=sys.stderr)
+        return 1
     print(f"Interface web em http://{host}:{port}  (Ctrl+C para parar)")
     print(f"Modelo: {app.options()['model']}  |  histórico: {app.service.store.path}")
     try:

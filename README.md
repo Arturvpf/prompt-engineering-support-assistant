@@ -15,7 +15,7 @@ Também há:
 - uma interface web local;
 - validação da saída com JSON Schema;
 - log de eventos com tempo, tokens e cache hit;
-- 87 testes automatizados que rodam sem chamar a API.
+- 89 testes automatizados que rodam sem chamar a API.
 
 As decisões de prompt, a comparação v1 × v2 e as limitações estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md).
 
@@ -178,6 +178,8 @@ A página permite:
 
 A web usa o mesmo serviço, histórico e cache da CLI. O servidor usa só a biblioteca padrão (`http.server`) e escuta em `127.0.0.1`, ou seja, só nesta máquina. A avaliação com a rubrica e a comparação continuam pela CLI.
 
+Se a porta já estiver em uso, o comando termina com código 1 e sugere outra porta (`--port`). Ele não divide a porta com o outro programa, o que no Windows faria o navegador abrir a aplicação errada.
+
 ### Métricas e logs
 
 ```bash
@@ -227,12 +229,12 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-São 87 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
+São 89 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
 - montagem do prompt nas duas versões, incluindo regras de estilo, delimitação do ticket e o gabarito fora do prompt;
 - cache (hit, miss, invalidação por versão e por parâmetros, `--no-cache`, hit sem chave);
 - validação por schema, incluindo todas as saídas reais de `samples/`;
 - correção de JSON, retry com backoff e histórico;
-- rubrica e comparação, configuração, web e CLI.
+- rubrica e comparação, configuração, web (incluindo porta em uso) e CLI.
 
 O GitHub Actions roda os testes em Python 3.10 e 3.12 a cada push na `main` e em cada PR (`.github/workflows/tests.yml`).
 
