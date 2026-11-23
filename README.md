@@ -17,10 +17,12 @@ Também há:
 - uma interface web local;
 - validação da saída com JSON Schema;
 - log de eventos com tempo, tokens e cache hit;
-- 134 testes automatizados que rodam sem chamar a API;
-- deploy em container (Docker + Render), com limites para uso público.
+- 140 testes automatizados que rodam sem chamar a API;
+- deploy na Vercel (versão online) e em container (Docker), com limites para uso público.
 
 As decisões de prompt, as comparações v1 × v2 e v2 × v3 e as limitações estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md).
+
+**Para testar sem instalar nada:** <https://prompt-engineering-support-assistan.vercel.app> (detalhes em [Deploy](#deploy)).
 
 ![Interface web: no topo, o cenário montado como frase ("Atender João Pereira sobre T004 com v2 e v3") e a mensagem do cliente; abaixo, uma coluna por versão do prompt com a nota da rubrica em destaque (12 e 13 de 15). Na v3, as hipóteses que o cliente não citou aparecem com marca-texto.](docs/images/gerar-v2-v3.png)
 
@@ -298,7 +300,7 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-São 134 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
+São 140 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
 - montagem do prompt nas três versões, incluindo regras de estilo, delimitação do ticket, encadeamento do diagnóstico na v3 e o gabarito fora do prompt;
 - fluxograma da v3: validação do grafo (nó solto, ligação quebrada, laço sem saída, decisão sem efeito) e desenho alinhado;
 - cache (hit, miss, invalidação por versão e por parâmetros, `--no-cache`, hit sem chave);
@@ -315,7 +317,8 @@ O GitHub Actions roda os testes em Python 3.10 e 3.12 a cada push na `main` e em
 
 ```
 main.py                      ponto de entrada (python main.py ...)
-Dockerfile, render.yaml      imagem da web e blueprint do Render (deploy)
+api/index.py, vercel.json   entrada WSGI e configuração da Vercel (versão online)
+Dockerfile, render.yaml      imagem da web e blueprint do Render (container)
 data/
   customers.json             5 perfis: nível técnico, estilo, canal e contexto
   tickets.json               4 tickets de exemplo (missing_on_purpose é gabarito, nunca vai ao prompt)
@@ -397,7 +400,27 @@ A versão aparece sozinha no `list` e nos menus. O cache não mistura versões, 
 
 ## Deploy
 
-A interface web roda num container. O [`Dockerfile`](Dockerfile) serve para Render, Railway, Fly.io, Hugging Face Spaces ou qualquer host de containers. A chave da API nunca entra na imagem: ela é passada como variável de ambiente pela plataforma.
+**Versão online:** <https://prompt-engineering-support-assistan.vercel.app>
+- Os cenários de `samples/` já estão no cache. Gerar o João + T004 com v1, v2 e v3 responde na hora, com as notas da rubrica, e as comparações aparecem prontas em "Avaliar e comparar".
+- Cenários novos chamam o modelo de verdade, com limite por pessoa.
+
+### Vercel (como a versão online foi publicada)
+
+- [`api/index.py`](api/index.py) expõe a mesma aplicação web como WSGI (`web.make_wsgi_app`). O roteador é o mesmo do servidor local (`web.dispatch`).
+- [`vercel.json`](vercel.json) põe `src`, `prompts`, `schemas`, `data` e `samples` no pacote da função e dá 60 s por requisição. O [`.vercelignore`](.vercelignore) deixa `.env` e `outputs/` de fora.
+
+Para publicar a sua cópia:
+1. Na Vercel, importe o repositório (ou instale o [app da Vercel no GitHub](https://github.com/apps/vercel/installations/new) e crie o projeto). Nenhuma configuração de build é necessária.
+2. Em **Settings > Environment Variables**, crie `OPENROUTER_API_KEY` com a sua chave. Sem ela, só o que está no cache funciona.
+3. Cada push na `main` publica de novo.
+
+Diferenças da plataforma:
+- **Disco:** só `/tmp` aceita escrita, então o histórico fica em `/tmp/outputs` e volta à demonstração de `samples/` quando a instância é recriada.
+- **Limites:** o limite por pessoa e o teto diário valem por instância.
+
+### Container (Render, Railway, Fly.io…)
+
+A interface web também roda num container. O [`Dockerfile`](Dockerfile) serve para Render, Railway, Fly.io, Hugging Face Spaces ou qualquer host de containers. A chave da API nunca entra na imagem: ela é passada como variável de ambiente pela plataforma.
 
 ### Render (grátis, a partir deste repositório)
 
