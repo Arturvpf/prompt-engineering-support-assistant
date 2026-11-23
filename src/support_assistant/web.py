@@ -215,7 +215,15 @@ class App:
                     except LLMError as exc:
                         results.append({"content_type": content_type, "prompt_version": version, "error": str(exc)})
                         continue
-                    results.append({**record, "rendered": render_output(content_type, record["output"], wrap=False)})
+                    extra = {}
+                    if record.get("cache_hit"):
+                        # A nota da rubrica é da execução original; o reaproveitamento mostra a dela.
+                        try:
+                            extra["source_evaluation"] = self.service.store.get(record["source_run_id"]).get("evaluation")
+                        except HistoryError:
+                            extra["source_evaluation"] = None
+                    results.append({**record, **extra,
+                                    "rendered": render_output(content_type, record["output"], wrap=False)})
         return {"results": results, "history_path": str(self.service.store.path)}
 
     def history(self, query: dict) -> dict:

@@ -197,3 +197,13 @@ def test_http_evaluate_and_missing_run(app):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_cache_hit_carries_the_original_evaluation(app):
+    body = {"customer_id": "joao-leigo-chat", "ticket_id": "T004", "content_types": ["diagnosis"], "versions": ["v2"]}
+    first = app.generate(body)["results"][0]
+    assert "source_evaluation" not in first
+    app.evaluate({"run_id": first["run_id"], "scores": SCORES})
+    again = app.generate(body)["results"][0]
+    assert again["cache_hit"] is True and again["evaluation"] is None
+    assert again["source_evaluation"]["total"] == 12
