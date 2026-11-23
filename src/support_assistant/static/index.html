@@ -997,7 +997,9 @@ function renderHistoryTable() {
       el("td", {text: `${customerName(r.customer_id)}, ${r.ticket_id}`}),
       el("td", {text: shortType(r.content_type)}),
       el("td", {}, vtag(r.prompt_version)),
-      el("td", {}, r.cache_hit ? el("span", {}, ["cache de ", el("code", {text: r.source_run_id})]) : el("span", {}, ["modelo, ", el("code", {text: r.run_id})])),
+      el("td", {}, r.cache_hit
+        ? el("span", {title: "Reaproveitado do cache; o código é o registro original"}, ["Cache · original ", el("code", {text: r.source_run_id})])
+        : el("span", {title: "Gerado chamando o modelo; o código é o registro (run_id) no history.json"}, ["Chamada ao modelo · registro ", el("code", {text: r.run_id})])),
       el("td", {class: "muted num-cell", text: r.cache_hit ? "0" : fmt(r.tokens)}),
       el("td", {class: "num-cell"}, r.score == null ? el("span", {class: "muted", text: "–"}) : el("b", {text: `${r.score} de 15`})),
       el("td", {}, el("button", {type: "button", class: "row-btn", text: "Abrir", onclick: () => openEvaluation(r.cache_hit ? r.source_run_id : r.run_id)})),
