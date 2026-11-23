@@ -22,7 +22,7 @@ Também há:
 
 As decisões de prompt, as comparações v1 × v2 e v2 × v3 e as limitações estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md).
 
-**Para testar sem instalar nada:** <https://prompt-engineering-support-assistan.vercel.app> (detalhes em [Deploy](#deploy)).
+**Para testar sem instalar nada:** <https://prompt-engineering-support-assistan.vercel.app> (detalhes em [Versão online](#versão-online)).
 
 ![Interface web: no topo, o cenário montado como frase ("Atender João Pereira sobre T004 com v2 e v3") e a mensagem do cliente; abaixo, uma coluna por versão do prompt com a nota da rubrica em destaque (12 e 13 de 15). Na v3, as hipóteses que o cliente não citou aparecem com marca-texto.](docs/images/gerar-v2-v3.png)
 
@@ -32,7 +32,7 @@ As decisões de prompt, as comparações v1 × v2 e v2 × v3 e as limitações e
 
 - [Requisitos](#requisitos) · [Setup](#setup) · [Variáveis do `.env`](#variáveis-do-env)
 - [Como usar](#como-usar): [linha de comando](#linha-de-comando), [avaliação e comparação](#histórico-avaliação-e-comparação), [interface web](#interface-web), [métricas e logs](#métricas-e-logs), [testes](#testes)
-- [Arquitetura](#arquitetura) · [Deploy](#deploy) · [Segurança](#segurança) · [Limitações conhecidas](#limitações-conhecidas)
+- [Arquitetura](#arquitetura) · [Versão online](#versão-online) · [Segurança](#segurança) · [Limitações conhecidas](#limitações-conhecidas)
 
 ---
 
@@ -93,7 +93,7 @@ python main.py list
 | `OUTPUT_DIR` | `outputs` | pasta do `history.json` (histórico e cache) e de `logs/events.jsonl` |
 | `LOG_LEVEL` | `WARNING` | eventos mostrados no terminal (`DEBUG`, `INFO`, `WARNING`, `ERROR`); o arquivo de eventos registra sempre a partir de `INFO` |
 
-As variáveis da interface web (`HOST`, `PORT` e `WEB_*`) só importam para expor a web na rede. Elas estão na seção [Deploy](#como-a-instalação-pública-se-protege) e comentadas no `.env.example`.
+As variáveis da interface web (`HOST`, `PORT` e `WEB_*`) só importam para expor a web na rede. Elas estão em [Proteções da instalação pública](#proteções-da-instalação-pública) e comentadas no `.env.example`.
 
 ---
 
@@ -252,7 +252,7 @@ Qualquer link aceita `&tema=claro` ou `&tema=escuro`. Valores que não existem n
 
 #### Como funciona
 
-A web usa o mesmo serviço, histórico e cache da CLI. Tudo o que vem do modelo é inserido como texto (`textContent`), nunca como HTML. A página não carrega nada de fora (CSP `default-src 'self'`) e funciona offline. O servidor usa só a biblioteca padrão (`http.server`). Por padrão, escuta em `127.0.0.1`, ou seja, só nesta máquina; para expor na rede, veja [Deploy](#deploy). O tema claro/escuro segue o sistema e tem um botão para alternar.
+A web usa o mesmo serviço, histórico e cache da CLI. Tudo o que vem do modelo é inserido como texto (`textContent`), nunca como HTML. A página não carrega nada de fora (CSP `default-src 'self'`) e funciona offline. O servidor usa só a biblioteca padrão (`http.server`). Por padrão, escuta em `127.0.0.1`, ou seja, só nesta máquina; para expor na rede, veja [Rodar em container](#rodar-em-container). O tema claro/escuro segue o sistema e tem um botão para alternar.
 
 Rotas da API: `GET /api/options`, `POST /api/generate`, `GET /api/history`, `GET /api/run?id=`, `POST /api/evaluate`, `POST /api/compare`, `GET /api/stats` e `GET /api/health`.
 
@@ -325,7 +325,7 @@ O GitHub Actions roda os testes em Python 3.10 e 3.12 a cada push na `main` e em
 ```
 main.py                      ponto de entrada (python main.py ...)
 api/index.py, vercel.json   entrada WSGI e configuração da Vercel (versão online)
-Dockerfile, render.yaml      imagem da web e blueprint do Render (container)
+Dockerfile                   imagem da web (container)
 data/
   customers.json             5 perfis: nível técnico, estilo, canal e contexto
   tickets.json               4 tickets de exemplo (missing_on_purpose é gabarito, nunca vai ao prompt)
@@ -405,60 +405,41 @@ A versão aparece sozinha no `list` e nos menus. O cache não mistura versões, 
 
 ---
 
-## Deploy
+## Versão online
 
-**Versão online:** <https://prompt-engineering-support-assistan.vercel.app>
+<https://prompt-engineering-support-assistan.vercel.app>
+
+É a mesma interface web de `python main.py web`, sem instalar nada:
 - Os cenários de `samples/` já estão no cache. Gerar o João + T004 com v1, v2 e v3 responde na hora, com as notas da rubrica, e as comparações aparecem prontas em "Avaliar e comparar".
-- Cenários novos chamam o modelo de verdade, com limite por pessoa.
+- Cenários novos chamam o modelo de verdade.
 
-### Vercel (como a versão online foi publicada)
+Como ela roda:
+- [`api/index.py`](api/index.py) expõe a aplicação web como WSGI, com o mesmo roteador do servidor local (`web.dispatch`). [`vercel.json`](vercel.json) define o que vai no pacote; [`.vercelignore`](.vercelignore) deixa `.env` e `outputs/` de fora.
+- O disco da plataforma é temporário: o histórico fica em `/tmp/outputs` e volta à demonstração de `samples/` quando a instância é recriada.
+- A chave da API fica nas variáveis do projeto na plataforma, nunca no repositório.
 
-- [`api/index.py`](api/index.py) expõe a mesma aplicação web como WSGI (`web.make_wsgi_app`). O roteador é o mesmo do servidor local (`web.dispatch`).
-- [`vercel.json`](vercel.json) põe `src`, `prompts`, `schemas`, `data` e `samples` no pacote da função e dá 60 s por requisição. O [`.vercelignore`](.vercelignore) deixa `.env` e `outputs/` de fora.
+### Proteções da instalação pública
 
-Para publicar a sua cópia:
-1. Na Vercel, importe o repositório (ou instale o [app da Vercel no GitHub](https://github.com/apps/vercel/installations/new) e crie o projeto). Nenhuma configuração de build é necessária.
-2. Em **Settings > Environment Variables**, crie `OPENROUTER_API_KEY` com a sua chave. Sem ela, só o que está no cache funciona.
-3. Cada push na `main` publica de novo.
+| Variável | Padrão online | O que faz |
+|---|---|---|
+| `WEB_TRUST_PROXY` | `true` | usa o IP do `X-Forwarded-For` (o proxy da plataforma) para o limite por pessoa |
+| `WEB_RATE_LIMIT` / `WEB_RATE_WINDOW_SECONDS` | `10` / `3600` | no máximo 10 gerações por pessoa por hora; acima disso, HTTP 429 com `Retry-After` |
+| `WEB_DAILY_MODEL_CALLS` | `200` | teto de chamadas reais ao modelo por dia. O cache não conta: quando o teto chega, o que já está no cache continua funcionando |
+| `WEB_SEED_SAMPLES` | `true` | um histórico vazio começa com as 23 execuções de `samples/`, já avaliadas |
+| `WEB_ALLOW_EVALUATION` | `true` | `false` desliga a gravação de notas e comparações pela web (HTTP 403) |
+| `HOST` / `PORT` | — | onde escutar quando a web é exposta na rede (por exemplo, no container) |
 
-Diferenças da plataforma:
-- **Disco:** só `/tmp` aceita escrita, então o histórico fica em `/tmp/outputs` e volta à demonstração de `samples/` quando a instância é recriada.
-- **Limites:** o limite por pessoa e o teto diário valem por instância.
+Localmente os padrões são outros: só `127.0.0.1` e sem limites. A interface mostra os limites ativos, e `GET /api/health` serve de verificação de saúde.
 
-### Container (Render, Railway, Fly.io…)
+### Rodar em container
 
-A interface web também roda num container. O [`Dockerfile`](Dockerfile) serve para Render, Railway, Fly.io, Hugging Face Spaces ou qualquer host de containers. A chave da API nunca entra na imagem: ela é passada como variável de ambiente pela plataforma.
-
-### Render (grátis, a partir deste repositório)
-
-O [`render.yaml`](render.yaml) descreve o serviço:
-1. No [Render](https://render.com), crie uma conta e escolha **New > Blueprint**.
-2. Conecte este repositório. O Render lê o `render.yaml`.
-3. Quando ele pedir `OPENROUTER_API_KEY`, cole a sua chave. Ela fica só no painel do Render.
-4. Ao terminar o build, o endereço público aparece no painel (algo como `https://prompt-engineering-support-assistant.onrender.com`). A cada push na `main`, o deploy é refeito.
-
-### Docker em qualquer máquina
+O [`Dockerfile`](Dockerfile) empacota a interface web, com usuário sem privilégios. A chave vem do `.env` na hora de rodar, nunca entra na imagem:
 
 ```bash
 docker build -t support-assistant .
 docker run --rm -p 8000:8000 --env-file .env -e HOST=0.0.0.0 support-assistant
 # abra http://localhost:8000
 ```
-
-### Como a instalação pública se protege
-
-| Variável | Padrão no container | O que faz |
-|---|---|---|
-| `HOST` / `PORT` | `0.0.0.0` / `8000` | onde escutar; as plataformas definem `PORT` sozinhas |
-| `WEB_TRUST_PROXY` | `true` | usa o IP do `X-Forwarded-For` (o proxy da plataforma) para o limite por pessoa |
-| `WEB_RATE_LIMIT` / `WEB_RATE_WINDOW_SECONDS` | `10` / `3600` | no máximo 10 gerações por pessoa por hora; acima disso, HTTP 429 com `Retry-After` |
-| `WEB_DAILY_MODEL_CALLS` | `200` | teto de chamadas reais ao modelo por dia. O cache não conta: quando o teto chega, o que já está no cache continua funcionando |
-| `WEB_SEED_SAMPLES` | `true` | um histórico vazio começa com as 23 execuções de `samples/`, já avaliadas. As comparações aparecem prontas e repetir esses cenários vem do cache |
-| `WEB_ALLOW_EVALUATION` | `true` | `false` desliga a gravação de notas e comparações pela web (HTTP 403) |
-
-Fora do container os padrões são os de uso local: só `127.0.0.1` e sem limites. A interface mostra os limites ativos. `GET /api/health` serve de verificação de saúde para a plataforma e para o `HEALTHCHECK` da imagem. O container roda com um usuário sem privilégios.
-
-**Disco efêmero.** Nos planos grátis, o `outputs/` do container é apagado quando o serviço reinicia ou "dorme" por inatividade. O histórico volta ao estado de demonstração (`samples/`). Para guardar tudo, monte um volume persistente em `/app/outputs`.
 
 ---
 

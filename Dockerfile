@@ -1,4 +1,4 @@
-# Imagem da interface web. Serve para Render, Railway, Fly.io, Hugging Face Spaces ou qualquer host de containers.
+# Imagem da interface web do assistente de suporte.
 # A chave da API NUNCA entra na imagem: é passada como variável de ambiente pela plataforma (ou --env-file).
 FROM python:3.12-slim
 
