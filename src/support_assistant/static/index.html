@@ -96,14 +96,20 @@
   .sentence { font-family: var(--display); font-size: clamp(26px, 3.2vw, 40px); line-height: 1.35; font-weight: 400;
               display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
   .sentence .slot { position: relative; display: inline-flex; align-items: baseline; }
-  .sentence select { appearance: none; -webkit-appearance: none; border: 0; border-bottom: 3px solid var(--ink);
-                     background: transparent; font: inherit; font-weight: 700; padding: 0 30px 2px 2px; cursor: pointer;
-                     max-width: min(78vw, 760px); text-overflow: ellipsis; border-radius: 0; color: var(--ink); }
+  /* Os campos da frase parecem campos: fundo próprio, borda em tinta v3 e seta, e reagem ao passar o mouse. */
+  .sentence select { appearance: none; -webkit-appearance: none; border: 1px solid var(--rule-strong); border-bottom: 3px solid var(--v3);
+                     background: var(--wash); font: inherit; font-weight: 700; padding: 0 44px 2px 12px; cursor: pointer;
+                     max-width: min(78vw, 760px); text-overflow: ellipsis; border-radius: 6px 6px 0 0; color: var(--ink);
+                     transition: background-color .15s, border-color .15s; }
+  .sentence select:hover { background: var(--v3-wash); border-color: var(--v3); }
   .sentence select:disabled { opacity: .45; cursor: not-allowed; }
-  .sentence .slot::after { content: ""; position: absolute; right: 8px; bottom: 16px; width: 9px; height: 9px;
-                           border-right: 2.5px solid currentColor; border-bottom: 2.5px solid currentColor; transform: rotate(45deg);
+  .sentence .slot::after { content: ""; position: absolute; right: 16px; bottom: 50%; width: 10px; height: 10px;
+                           border-right: 3px solid var(--v3); border-bottom: 3px solid var(--v3); transform: rotate(45deg);
                            pointer-events: none; }
-  .sentence select option { font: 16px var(--text); font-weight: 400; color: #18222D; }
+  /* A lista aberta usa as cores do tema: no escuro, texto claro sobre fundo escuro. */
+  select option { background-color: var(--sheet); color: var(--ink); }
+  .sentence select option { font: 16px var(--text); font-weight: 400; }
+  .hint { margin-top: 6px; color: var(--ink-3); font-size: 14px; }
   .vtoggles { display: inline-flex; gap: 8px; flex-wrap: wrap; }
   .vtoggle { position: relative; display: inline-flex; align-items: baseline; gap: 6px; cursor: pointer;
              padding: 0 10px 2px; border-bottom: 3px solid var(--rule-strong); color: var(--ink-3); }
@@ -124,6 +130,12 @@
   .text-btn { min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink-2); cursor: pointer;
               text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rule-strong); }
   .text-btn:hover { color: var(--ink); text-decoration-color: currentColor; }
+  .write-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 10px; padding: 0 18px;
+               border: 1.5px solid var(--v3); border-radius: 6px; background: var(--v3-wash); color: var(--ink);
+               font-weight: 600; cursor: pointer; transition: background-color .15s; }
+  .write-btn::before { content: "\270E"; font-size: 18px; line-height: 1; color: var(--v3); }
+  .write-btn[aria-expanded="true"]::before { content: "\2190"; }
+  .write-btn:hover { background: var(--wash); }
 
   .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; margin-top: 28px; }
   .controls fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -318,12 +330,13 @@
       <div class="wrap">
         <div class="sentence">
           <span>Atender</span>
-          <span class="slot"><select id="customer" aria-label="Cliente"></select></span>
+          <span class="slot"><select id="customer" aria-label="Cliente" title="Clique para trocar o cliente"></select></span>
           <span>sobre</span>
-          <span class="slot"><select id="ticket" aria-label="Ticket"></select></span>
+          <span class="slot"><select id="ticket" aria-label="Ticket" title="Clique para trocar o ticket"></select></span>
           <span>com</span>
           <span class="vtoggles" id="versions" role="group" aria-label="Versões do prompt"></span>
         </div>
+        <p class="hint">Clique no cliente ou no ticket para trocar o cenário, e escolha quais versões comparar.</p>
         <p class="profile" id="customer-tags"></p>
 
         <div class="quote">
@@ -334,7 +347,7 @@
             <textarea id="ticket_text" maxlength="4000" placeholder="A API retorna 500 ao criar pedido desde ontem"></textarea>
             <span class="small muted" id="ticket-count">0 de 4000 caracteres</span>
           </div>
-          <span style="grid-column: 2"><button type="button" class="text-btn" id="toggle-text" aria-expanded="false" aria-controls="ticket-text-wrap">Escrever outro problema</button></span>
+          <span style="grid-column: 2"><button type="button" class="write-btn" id="toggle-text" aria-expanded="false" aria-controls="ticket-text-wrap">Escrever outro problema</button></span>
         </div>
 
         <div class="notice" id="demo-note" hidden></div>
