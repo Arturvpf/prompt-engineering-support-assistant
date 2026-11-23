@@ -6,6 +6,7 @@
 
 # Saídas locais (histórico de execuções e cache de respostas do LLM)
 outputs/
+demo/
 .cache/
 
 # Python

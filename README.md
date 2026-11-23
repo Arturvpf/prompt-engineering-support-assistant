@@ -138,6 +138,31 @@ python main.py compare a2cf94288d19 524bbca9b910 --verdict "Por que a v2 é melh
 
 O `compare` recusa execuções que diferem em algo além da versão do prompt (cliente, ticket, provedor, modelo ou configurações). Também recusa execuções sem avaliação e registros vindos do cache. Por padrão, salva o resultado em `outputs/comparisons/`; use `--out` para escolher outro caminho.
 
+Os `run_id` acima são os da comparação em [`samples/`](samples/). Num clone novo o histórico começa vazio: use os `run_id` que o `generate` e o `history` mostrarem, ou carregue o histórico de exemplo como explicado a seguir.
+
+#### Reproduzir a comparação v1 × v2 sem chave de API
+
+O arquivo [`samples/history_comparison_joao-leigo-chat_T004.json`](samples/history_comparison_joao-leigo-chat_T004.json) está no mesmo formato do `history.json`. Copie-o para uma pasta separada e aponte `OUTPUT_DIR` para ela. O `history` e o `compare` funcionam sem chamar a API:
+
+```powershell
+# Windows (PowerShell)
+New-Item -ItemType Directory -Force demo | Out-Null
+Copy-Item samples\history_comparison_joao-leigo-chat_T004.json demo\history.json
+$env:OUTPUT_DIR = "demo"
+python main.py history
+python main.py compare a2cf94288d19 524bbca9b910 39d4ea594be4 9c2cf899bd60 ca699d54d804 62960c793a80 1e5783f19ae3 a050cc3c5fa8 --verdict "..."
+Remove-Item Env:OUTPUT_DIR
+```
+
+```bash
+# Linux / macOS
+mkdir -p demo && cp samples/history_comparison_joao-leigo-chat_T004.json demo/history.json
+OUTPUT_DIR=demo python main.py history
+OUTPUT_DIR=demo python main.py compare a2cf94288d19 524bbca9b910 39d4ea594be4 9c2cf899bd60 ca699d54d804 62960c793a80 1e5783f19ae3 a050cc3c5fa8 --verdict "..."
+```
+
+O resultado é a mesma tabela de `samples/comparison_v1_v2_joao-leigo-chat_T004.json`: v1 = 38, v2 = 49.
+
 ### Interface web
 
 ```bash
