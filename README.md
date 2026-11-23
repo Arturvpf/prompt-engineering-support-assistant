@@ -17,7 +17,8 @@ Também há:
 - uma interface web local;
 - validação da saída com JSON Schema;
 - log de eventos com tempo, tokens e cache hit;
-- 121 testes automatizados que rodam sem chamar a API.
+- 134 testes automatizados que rodam sem chamar a API;
+- deploy em container (Docker + Render), com limites para uso público.
 
 As decisões de prompt, as comparações v1 × v2 e v2 × v3 e as limitações estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md).
 
@@ -245,13 +246,14 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-São 121 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
+São 134 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
 - montagem do prompt nas três versões, incluindo regras de estilo, delimitação do ticket, encadeamento do diagnóstico na v3 e o gabarito fora do prompt;
 - fluxograma da v3: validação do grafo (nó solto, ligação quebrada, laço sem saída, decisão sem efeito) e desenho alinhado;
 - cache (hit, miss, invalidação por versão e por parâmetros, `--no-cache`, hit sem chave);
 - validação por schema, incluindo todas as saídas reais de `samples/`;
 - correção de JSON, retry com backoff e histórico;
-- rubrica e comparação (também pela API da web), configuração, web (incluindo porta em uso e erros 400/404) e CLI.
+- rubrica e comparação (também pela API da web), configuração, web (incluindo porta em uso e erros 400/403/404/429) e CLI;
+- deploy: limite por pessoa, teto diário de chamadas (o cache não conta), histórico de demonstração a partir de `samples/` e configuração por variáveis de ambiente.
 
 O GitHub Actions roda os testes em Python 3.10 e 3.12 a cada push na `main` e em cada PR (`.github/workflows/tests.yml`).
 
@@ -261,6 +263,7 @@ O GitHub Actions roda os testes em Python 3.10 e 3.12 a cada push na `main` e em
 
 ```
 main.py                      ponto de entrada (python main.py ...)
+Dockerfile, render.yaml      imagem da web e blueprint do Render (deploy)
 data/
   customers.json             5 perfis: nível técnico, estilo, canal e contexto
   tickets.json               4 tickets de exemplo (missing_on_purpose é gabarito, nunca vai ao prompt)
@@ -339,12 +342,50 @@ A versão aparece sozinha no `list` e nos menus. O cache não mistura versões, 
 
 ---
 
+## Deploy
+
+A interface web roda num container. O [`Dockerfile`](Dockerfile) serve para Render, Railway, Fly.io, Hugging Face Spaces ou qualquer host de containers. A chave da API nunca entra na imagem: ela é passada como variável de ambiente pela plataforma.
+
+### Render (grátis, a partir deste repositório)
+
+O [`render.yaml`](render.yaml) descreve o serviço:
+1. No [Render](https://render.com), crie uma conta e escolha **New > Blueprint**.
+2. Conecte este repositório. O Render lê o `render.yaml`.
+3. Quando ele pedir `OPENROUTER_API_KEY`, cole a sua chave. Ela fica só no painel do Render.
+4. Ao terminar o build, o endereço público aparece no painel (algo como `https://prompt-engineering-support-assistant.onrender.com`). A cada push na `main`, o deploy é refeito.
+
+### Docker em qualquer máquina
+
+```bash
+docker build -t support-assistant .
+docker run --rm -p 8000:8000 --env-file .env -e HOST=0.0.0.0 support-assistant
+# abra http://localhost:8000
+```
+
+### Como a instalação pública se protege
+
+| Variável | Padrão no container | O que faz |
+|---|---|---|
+| `HOST` / `PORT` | `0.0.0.0` / `8000` | onde escutar; as plataformas definem `PORT` sozinhas |
+| `WEB_TRUST_PROXY` | `true` | usa o IP do `X-Forwarded-For` (o proxy da plataforma) para o limite por pessoa |
+| `WEB_RATE_LIMIT` / `WEB_RATE_WINDOW_SECONDS` | `10` / `3600` | no máximo 10 gerações por pessoa por hora; acima disso, HTTP 429 com `Retry-After` |
+| `WEB_DAILY_MODEL_CALLS` | `200` | teto de chamadas reais ao modelo por dia. O cache não conta: quando o teto chega, o que já está no cache continua funcionando |
+| `WEB_SEED_SAMPLES` | `true` | um histórico vazio começa com as 23 execuções de `samples/`, já avaliadas. As comparações aparecem prontas e repetir esses cenários vem do cache |
+| `WEB_ALLOW_EVALUATION` | `true` | `false` desliga a gravação de notas e comparações pela web (HTTP 403) |
+
+Fora do container os padrões são os de uso local: só `127.0.0.1` e sem limites. A interface mostra os limites ativos. `GET /api/health` serve de verificação de saúde para a plataforma e para o `HEALTHCHECK` da imagem. O container roda com um usuário sem privilégios.
+
+**Disco efêmero.** Nos planos grátis, o `outputs/` do container é apagado quando o serviço reinicia ou "dorme" por inatividade. O histórico volta ao estado de demonstração (`samples/`). Para guardar tudo, monte um volume persistente em `/app/outputs`.
+
+---
+
 ## Segurança
 
 - As chaves ficam só no `.env`, que está no `.gitignore`. O `.env.example` não tem valores reais. A configuração nunca imprime a chave.
 - O relato do cliente vai entre `<ticket>` e `</ticket>`, e a persona manda tratá-lo como dado. É uma proteção básica contra prompt injection, não uma garantia.
 - Os prompts v2 e v3 proíbem pedir senhas, códigos de verificação, dados de cartão ou documentos; a v3 deixa explícito que isso vale também para o encaminhamento ao suporte.
 - O gabarito `missing_on_purpose` dos tickets não entra no prompt nem no histórico.
+- Exposta na nuvem, a web limita gerações por pessoa e chamadas por dia, valida o tamanho de cada entrada e só insere o que vem do modelo como texto. Ela envia `Content-Security-Policy`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` e `nosniff`. A imagem não leva `.env`, `outputs/` nem `.git` (`.dockerignore`).
 
 ## Limitações conhecidas
 
