@@ -136,6 +136,13 @@ python main.py generate -c joao-leigo-chat -t T004 --type diagnosis --json
 
 ### Histórico, avaliação e comparação
 
+> **Como comparar versões de prompt: gerar → avaliar → comparar**
+> 1. **Gere** o mesmo cliente + ticket com duas ou mais versões (v1, v2, v3), com o mesmo modelo e os mesmos parâmetros.
+> 2. **Avalie** cada execução com a rubrica: clareza, adequação ao cliente e acionabilidade, de 1 a 5, cada nota com justificativa.
+> 3. **Compare.** Só entram execuções **avaliadas** e **geradas pelo modelo**. Um resultado do cache é cópia de outro registro, então a nota e a comparação ficam na execução original, que o próprio resultado indica.
+>
+> A comparação isola a versão do prompt: execuções com cliente, ticket, provedor, modelo ou parâmetros diferentes são recusadas. Comparar modelos não é o objetivo; trocar o modelo mudaria duas variáveis ao mesmo tempo e a comparação deixaria de ser justa.
+
 ```bash
 # execuções salvas, com run_id, origem (modelo ou cache) e nota
 python main.py history -c joao-leigo-chat -t T004
@@ -218,7 +225,7 @@ A interface tem três telas.
 
 - Mostra as execuções de um cenário (mesmo cliente, ticket, modelo e parâmetros). Você dá as notas da rubrica na própria tela, com justificativa obrigatória. Uma execução já avaliada abre com as notas preenchidas.
 - O "Avaliar" de um resultado vindo do cache abre a execução original.
-- Marque execuções avaliadas para gerar a comparação, salva em `outputs/comparisons/`.
+- Marque execuções avaliadas para gerar a comparação, salva em `outputs/comparisons/`. A caixa de marcar só fica ativa depois que a execução tem nota (o fluxo completo está em [Histórico, avaliação e comparação](#histórico-avaliação-e-comparação)).
 
 ![Tela de avaliação: a lista de execuções do cenário, o fluxograma da v3 e a rubrica com nota de 1 a 5 e justificativa para clareza, adequação ao cliente e acionabilidade.](docs/images/avaliar-rubrica.png)
 
