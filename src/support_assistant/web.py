@@ -301,13 +301,28 @@ class App:
             raise NotFound(str(exc)) from None
 
 
-def make_handler(app: App):
-    class Handler(BaseHTTPRequestHandler):
-        server_version = "SupportAssistant/1.0"
+# ----------------------------------------------------------------- roteamento
 
-        def do_GET(self) -> None:  # noqa: N802 - nome exigido pelo http.server
-            url = urlparse(self.path)
-            query = parse_qs(url.query)
+SECURITY_HEADERS = [("X-Content-Type-Options", "nosniff"), ("Referrer-Policy", "no-referrer"), ("X-Frame-Options", "DENY")]
+PAGE_CSP = ("default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; "
+            "frame-ancestors 'none'")
+
+Response = tuple[int, list[tuple[str, str]], bytes]
+
+
+def dispatch(app: App, method: str, target: str, header, read_body, client_address: str) -> Response:
+    """Resolve uma requisição e devolve (status, cabeçalhos, corpo).
+
+    É o único roteador da web: o servidor local (http.server) e a função da Vercel
+    (WSGI) só traduzem a requisição para esta chamada. ``header(nome)`` devolve um
+    cabeçalho ou None; ``read_body(n)`` lê n bytes do corpo.
+    """
+    url = urlparse(target)
+    query = parse_qs(url.query)
+    try:
+        if method in ("GET", "HEAD"):
+            if url.path in ("/", "/index.html"):
+                return _page(STATIC_DIR / "index.html")
             routes = {
                 "/api/options": app.options,
                 "/api/health": app.health,
@@ -315,97 +330,121 @@ def make_handler(app: App):
                 "/api/history": lambda: app.history(query),
                 "/api/run": lambda: app.run(query),
             }
-            if url.path in ("/", "/index.html"):
-                return self._send_file(STATIC_DIR / "index.html", "text/html; charset=utf-8")
-            if url.path in routes:
-                return self._handle(routes[url.path])
-            self._send_json({"error": "rota não encontrada"}, HTTPStatus.NOT_FOUND)
-
-        def do_POST(self) -> None:  # noqa: N802
+            if url.path not in routes:
+                return _json({"error": "rota não encontrada"}, HTTPStatus.NOT_FOUND)
+            return _json(routes[url.path]())
+        if method == "POST":
             routes = {
-                "/api/generate": lambda body: app.generate(body, client=self._client_id()),
+                "/api/generate": lambda body: app.generate(body, client=_client_id(app, header, client_address)),
                 "/api/evaluate": app.evaluate,
                 "/api/compare": app.compare,
             }
-            action = routes.get(urlparse(self.path).path)
+            action = routes.get(url.path)
             if action is None:
-                return self._send_json({"error": "rota não encontrada"}, HTTPStatus.NOT_FOUND)
-            self._handle(lambda: action(self._read_json()))
+                return _json({"error": "rota não encontrada"}, HTTPStatus.NOT_FOUND)
+            return _json(action(_read_json(header, read_body)))
+        return _json({"error": "método não permitido"}, HTTPStatus.METHOD_NOT_ALLOWED, [("Allow", "GET, POST")])
+    except BadRequest as exc:
+        return _json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+    except NotFound as exc:
+        return _json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+    except Forbidden as exc:
+        return _json({"error": str(exc)}, HTTPStatus.FORBIDDEN)
+    except TooManyRequests as exc:
+        return _json({"error": str(exc)}, HTTPStatus.TOO_MANY_REQUESTS, [("Retry-After", str(exc.retry_after))])
+    except (ConfigError, DataValidationError, PromptError, HistoryError, LLMError) as exc:
+        return _json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
-        # ---------------------------------------------------------- helpers
 
-        def _handle(self, action) -> None:
-            try:
-                self._send_json(action())
-            except BadRequest as exc:
-                self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
-            except NotFound as exc:
-                self._send_json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
-            except Forbidden as exc:
-                self._send_json({"error": str(exc)}, HTTPStatus.FORBIDDEN)
-            except TooManyRequests as exc:
-                self._send_json({"error": str(exc)}, HTTPStatus.TOO_MANY_REQUESTS,
-                                {"Retry-After": str(exc.retry_after)})
-            except (ConfigError, DataValidationError, PromptError, HistoryError, LLMError) as exc:
-                self._send_json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
+def _read_json(header, read_body) -> dict:
+    if "application/json" not in (header("Content-Type") or ""):
+        raise BadRequest("envie Content-Type: application/json")
+    try:
+        length = int(header("Content-Length") or 0)
+    except ValueError:
+        raise BadRequest("Content-Length inválido") from None
+    if length <= 0 or length > MAX_BODY_BYTES:
+        raise BadRequest(f"corpo vazio ou maior que {MAX_BODY_BYTES} bytes")
+    try:
+        data = json.loads(read_body(length).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise BadRequest("JSON inválido") from None
+    if not isinstance(data, dict):
+        raise BadRequest("o corpo deve ser um objeto JSON")
+    return data
 
-        def _read_json(self) -> dict:
-            if "application/json" not in (self.headers.get("Content-Type") or ""):
-                raise BadRequest("envie Content-Type: application/json")
-            try:
-                length = int(self.headers.get("Content-Length") or 0)
-            except ValueError:
-                raise BadRequest("Content-Length inválido") from None
-            if length <= 0 or length > MAX_BODY_BYTES:
-                raise BadRequest(f"corpo vazio ou maior que {MAX_BODY_BYTES} bytes")
-            try:
-                data = json.loads(self.rfile.read(length).decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError):
-                raise BadRequest("JSON inválido") from None
-            if not isinstance(data, dict):
-                raise BadRequest("o corpo deve ser um objeto JSON")
-            return data
 
-        def _client_id(self) -> str:
-            """IP de quem pediu. Atrás do proxy da plataforma, vem no X-Forwarded-For (só se confiável)."""
-            if app.web.trust_proxy:
-                forwarded = (self.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
-                if forwarded:
-                    return forwarded[:64]
-            return self.client_address[0]
+def _client_id(app: App, header, client_address: str) -> str:
+    """IP de quem pediu. Atrás do proxy da plataforma, vem no X-Forwarded-For (só se confiável)."""
+    if app.web.trust_proxy:
+        forwarded = (header("X-Forwarded-For") or "").split(",")[0].strip()
+        if forwarded:
+            return forwarded[:64]
+    return client_address
 
-        def _security_headers(self) -> None:
-            self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Referrer-Policy", "no-referrer")
-            self.send_header("X-Frame-Options", "DENY")
 
-        def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK, extra: dict | None = None) -> None:
-            body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+def _json(payload: dict, status: HTTPStatus = HTTPStatus.OK, extra: list | None = None) -> Response:
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    headers = [("Content-Type", "application/json; charset=utf-8"), ("Content-Length", str(len(body))),
+               ("Cache-Control", "no-store"), *(extra or []), *SECURITY_HEADERS]
+    return int(status), headers, body
+
+
+def _page(path: Path) -> Response:
+    body = path.read_bytes()
+    headers = [("Content-Type", "text/html; charset=utf-8"), ("Content-Length", str(len(body))),
+               *SECURITY_HEADERS, ("Content-Security-Policy", PAGE_CSP)]
+    return int(HTTPStatus.OK), headers, body
+
+
+def make_handler(app: App):
+    """Adaptador para o servidor da biblioteca padrão (uso local e container)."""
+
+    class Handler(BaseHTTPRequestHandler):
+        server_version = "SupportAssistant/1.0"
+
+        def _respond(self, method: str) -> None:
+            status, headers, body = dispatch(app, method, self.path, self.headers.get, self.rfile.read,
+                                             self.client_address[0])
             self.send_response(status)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
-            for name, value in (extra or {}).items():
+            for name, value in headers:
                 self.send_header(name, value)
-            self._security_headers()
             self.end_headers()
-            self.wfile.write(body)
+            if method != "HEAD":
+                self.wfile.write(body)
 
-        def _send_file(self, path: Path, content_type: str) -> None:
-            body = path.read_bytes()
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-Type", content_type)
-            self.send_header("Content-Length", str(len(body)))
-            self._security_headers()
-            self.send_header("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; "
-                                                        "script-src 'self' 'unsafe-inline'; frame-ancestors 'none'")
-            self.end_headers()
-            self.wfile.write(body)
+        def do_GET(self) -> None:  # noqa: N802 - nome exigido pelo http.server
+            self._respond("GET")
+
+        def do_HEAD(self) -> None:  # noqa: N802
+            self._respond("HEAD")
+
+        def do_POST(self) -> None:  # noqa: N802
+            self._respond("POST")
 
         def log_message(self, fmt: str, *args) -> None:  # silencia o log padrão por requisição
             pass
 
     return Handler
+
+
+def make_wsgi_app(app: App):
+    """Adaptador WSGI (PEP 3333), usado pela função Python da Vercel e por qualquer servidor WSGI."""
+
+    def application(environ, start_response):
+        def header(name: str):
+            key = name.upper().replace("-", "_")
+            return environ.get(key) if key in ("CONTENT_TYPE", "CONTENT_LENGTH") else environ.get(f"HTTP_{key}")
+
+        target = environ.get("PATH_INFO") or "/"
+        if environ.get("QUERY_STRING"):
+            target += "?" + environ["QUERY_STRING"]
+        status, headers, body = dispatch(app, environ.get("REQUEST_METHOD", "GET"), target, header,
+                                         environ["wsgi.input"].read, environ.get("REMOTE_ADDR", ""))
+        start_response(f"{status} {HTTPStatus(status).phrase}", headers)
+        return [b"" if environ.get("REQUEST_METHOD") == "HEAD" else body]
+
+    return application
 
 
 class ExclusiveHTTPServer(ThreadingHTTPServer):
