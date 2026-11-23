@@ -22,9 +22,9 @@ Também há:
 
 As decisões de prompt, as comparações v1 × v2 e v2 × v3 e as limitações estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md).
 
-![Interface web: o mesmo cliente e ticket com os prompts v2 e v3 lado a lado. Na v3 o diagnóstico traz hipóteses marcadas como inferidas, e o rodapé de cada card diz que o resultado veio do cache, com o run_id original e o do registro novo.](docs/images/gerar-v2-v3.png)
+![Interface web: no topo, o cenário montado como frase ("Atender João Pereira sobre T004 com v2 e v3") e a mensagem do cliente; abaixo, uma coluna por versão do prompt com a nota da rubrica em destaque (12 e 13 de 15). Na v3, as hipóteses que o cliente não citou aparecem com marca-texto.](docs/images/gerar-v2-v3.png)
 
-*João Pereira (leigo, direto, chat) com o ticket T004 nos prompts v2 e v3. A v3 levanta o bloqueio de segurança por aparelho novo, uma causa que o cliente não citou, marcada como **inferida**.*
+*João Pereira (leigo, direto, chat) com o ticket T004 nos prompts v2 e v3. A v3 levanta o bloqueio de segurança por aparelho novo, uma causa que o cliente não citou, marcada como **inferida**, e a nota do diagnóstico na rubrica sobe de 12 para 13.*
 
 ## Sumário
 
@@ -195,15 +195,20 @@ A interface tem três telas.
 
 #### Gerar
 
-- Escolha o cliente e o ticket (ou escreva um novo), os tipos de conteúdo e as versões do prompt.
-- Os resultados aparecem por tipo, com as versões lado a lado (imagem no topo deste README).
-- Cada tipo tem uma apresentação própria: hipóteses com probabilidade e marca de "inferida", passos numerados com resultado esperado, perguntas com motivo e onde encontrar, e o fluxograma com os pontos de decisão.
-- O rodapé de cada card diz de onde veio o resultado:
-  - "Do cache · sem chamada à API · original `524bbca9b910` · este registro `…`": quando veio do cache;
-  - "Gerado agora · 3,3 s · 1.668 tokens · 1 tentativa": quando chamou o modelo.
+- O cenário é uma frase: "Atender **[cliente]** sobre **[ticket]** com **[v1] [v2] [v3]**". Abaixo dela aparecem o perfil do cliente e a mensagem dele; também dá para escrever outro problema.
+- Cada versão do prompt tem a sua cor, mais escura a cada versão: v1 grafite, v2 petróleo, v3 índigo. Os resultados aparecem por tipo, com uma coluna por versão.
+- Cada coluna mostra a nota da rubrica em destaque. Num resultado vindo do cache, a nota é a da execução original.
+- Cada tipo tem uma apresentação própria:
+  - hipóteses com um medidor de probabilidade e marca-texto nas inferidas;
+  - passos numerados com o resultado esperado;
+  - perguntas com o motivo e onde encontrar a resposta;
+  - o fluxograma com as decisões.
+- A faixa abaixo do cabeçalho diz de onde veio o resultado:
+  - "Reaproveitado do cache, sem chamar a API. Original `524bbca9b910`, este registro `…`";
+  - "Gerado agora em 3,3 s. 1.668 tokens, 1 tentativa".
 - Na v3, mostra também qual diagnóstico alimentou o prompt.
 
-![Aba Fluxograma em tema escuro: à esquerda a v2, com caixas desenhadas pelo modelo em linha reta; à direita a v3, desenhada pelo código a partir do grafo, com os dois ramos de cada decisão visíveis.](docs/images/fluxograma-v2-v3.png)
+![Aba Fluxograma em tema escuro: à esquerda a v2 (nota 11), com caixas desenhadas pelo modelo em linha reta; à direita a v3 (nota 13), desenhada pelo código a partir do grafo, com os dois ramos de cada decisão visíveis.](docs/images/fluxograma-v2-v3.png)
 
 *Fluxograma da v2 (desenhado pelo modelo, em linha reta e sem os ramos das decisões) e da v3 (o modelo devolve um grafo e o código desenha, com os dois ramos de cada decisão à vista).*
 
@@ -215,7 +220,7 @@ A interface tem três telas.
 
 ![Tela de avaliação: a lista de execuções do cenário, o fluxograma da v3 e a rubrica com nota de 1 a 5 e justificativa para clareza, adequação ao cliente e acionabilidade.](docs/images/avaliar-rubrica.png)
 
-![Comparação v2 × v3 na interface: notas por critério e por tipo, delta do total e tokens, com v2 = 49, v3 = 51 e a v3 como vencedora.](docs/images/comparacao-v2-v3.png)
+![Comparação v2 × v3 na interface: totais 49 e 51 na cor de cada versão, notas por critério e por tipo, variação do total e tokens; a v3 vence.](docs/images/comparacao-v2-v3.png)
 
 #### Histórico e métricas
 
