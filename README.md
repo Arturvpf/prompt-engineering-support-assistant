@@ -17,7 +17,7 @@ Também há:
 - uma interface web local;
 - validação da saída com JSON Schema;
 - log de eventos com tempo, tokens e cache hit;
-- 110 testes automatizados que rodam sem chamar a API.
+- 121 testes automatizados que rodam sem chamar a API.
 
 As decisões de prompt, as comparações v1 × v2 e v2 × v3 e as limitações estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md).
 
@@ -178,13 +178,21 @@ python main.py web            # abre em http://127.0.0.1:8000
 python main.py web --port 8080
 ```
 
-A página permite:
-- escolher o perfil e o ticket, ou digitar um ticket novo;
-- marcar os tipos de conteúdo e uma ou mais versões, para comparar lado a lado;
-- ver cada resultado formatado, com tempo, tokens, origem (modelo ou cache), `run_id` e o JSON completo do registro;
-- consultar o histórico e as métricas em abas.
+A interface tem três telas:
 
-A web usa o mesmo serviço, histórico e cache da CLI. O servidor usa só a biblioteca padrão (`http.server`) e escuta em `127.0.0.1`, ou seja, só nesta máquina. A avaliação com a rubrica e a comparação continuam pela CLI.
+- **Gerar.**
+  - Escolha o cliente e o ticket (ou escreva um novo), os tipos de conteúdo e as versões do prompt.
+  - Os resultados aparecem por tipo, com as versões lado a lado. Cada tipo tem uma apresentação própria: hipóteses com probabilidade e marca de "inferida", passos numerados com resultado esperado, perguntas com motivo e onde encontrar, e o fluxograma com os pontos de decisão.
+  - O rodapé de cada card diz de onde veio o resultado. Exemplos: "Do cache · sem chamada à API · original `524bbca9b910` · este registro `47f9470ec7af`" ou "Gerado agora · 3,3 s · 1.668 tokens · 1 tentativa". Na v3, também mostra qual diagnóstico alimentou o prompt.
+- **Avaliar e comparar.**
+  - Mostra as execuções de um cenário (mesmo cliente, ticket, modelo e parâmetros). Você dá as notas da rubrica na própria tela, com justificativa obrigatória.
+  - Também dá para marcar execuções avaliadas e gerar a comparação, salva em `outputs/comparisons/`.
+  - O "Avaliar" de um resultado vindo do cache abre a execução original.
+- **Histórico e métricas.** Chamadas, cache hits, tokens gastos e economizados, tokens médios por tipo e versão, e a lista de execuções com filtros.
+
+A web usa o mesmo serviço, histórico e cache da CLI. Tudo o que vem do modelo é inserido como texto (`textContent`), nunca como HTML. A página não carrega nada de fora (CSP `default-src 'self'`) e funciona offline. O servidor usa só a biblioteca padrão (`http.server`) e escuta em `127.0.0.1`, ou seja, só nesta máquina. O tema claro/escuro segue o sistema e tem um botão para alternar.
+
+Rotas da API: `GET /api/options`, `POST /api/generate`, `GET /api/history`, `GET /api/run?id=`, `POST /api/evaluate`, `POST /api/compare`, `GET /api/stats`.
 
 Se a porta já estiver em uso, o comando termina com código 1 e sugere outra porta (`--port`). Ele não divide a porta com o outro programa, o que no Windows faria o navegador abrir a aplicação errada.
 
@@ -215,7 +223,7 @@ Cliente: João Pereira (joao-leigo-chat)  |  Ticket: T004
    Onde encontrar: No campo de login do aplicativo, onde você digita para entrar.
 ...
 ----------------------------------------------------------------------------------------
-[cache] Resultado reaproveitado da execução 62960c793a80 (nenhuma chamada à API).
+[cache] Do cache, sem chamada à API. Execução original: 62960c793a80 (o run_id abaixo é o registro deste reaproveitamento).
 Salvo em: ...\outputs\history.json  (run_id 887b2b27ea9b)
 ```
 
@@ -237,13 +245,13 @@ pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-São 110 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
+São 121 testes. O modelo é substituído por um cliente falso, então os testes não precisam de chave nem de internet e não gastam cota. Eles cobrem:
 - montagem do prompt nas três versões, incluindo regras de estilo, delimitação do ticket, encadeamento do diagnóstico na v3 e o gabarito fora do prompt;
 - fluxograma da v3: validação do grafo (nó solto, ligação quebrada, laço sem saída, decisão sem efeito) e desenho alinhado;
 - cache (hit, miss, invalidação por versão e por parâmetros, `--no-cache`, hit sem chave);
 - validação por schema, incluindo todas as saídas reais de `samples/`;
 - correção de JSON, retry com backoff e histórico;
-- rubrica e comparação, configuração, web (incluindo porta em uso) e CLI.
+- rubrica e comparação (também pela API da web), configuração, web (incluindo porta em uso e erros 400/404) e CLI.
 
 O GitHub Actions roda os testes em Python 3.10 e 3.12 a cada push na `main` e em cada PR (`.github/workflows/tests.yml`).
 
@@ -279,7 +287,7 @@ src/support_assistant/
   observability.py           log de eventos em JSON lines e estatísticas do histórico
   formatting.py              saída legível no terminal
   cli.py                     comandos interactive, list, generate, history, evaluate, compare, stats, web
-  web.py, static/index.html  interface web local (biblioteca padrão)
+  web.py, static/index.html  interface web local (biblioteca padrão): gerar, avaliar, comparar, histórico
 samples/                     exemplos de saída e as comparações v1 x v2 e v2 x v3 completas
 tests/                       testes com pytest e cliente LLM falso
 ```
