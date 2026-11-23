@@ -67,6 +67,21 @@ class HistoryStore:
         self._write(records)
         return record
 
+    def seed(self, records: list[dict]) -> int:
+        """Preenche um histórico VAZIO com registros prontos (ex.: os de samples/), mantendo run_id e chaves.
+
+        Usado no deploy de demonstração: os cenários de exemplo já aparecem avaliados
+        e repetir um deles vem do cache. Um histórico com dados nunca é sobrescrito.
+        """
+        if self.load():
+            return 0
+        unique = {r["run_id"]: {**r, "seeded": True}
+                  for r in records if isinstance(r, dict) and r.get("run_id") and r.get("output")}
+        ordered = sorted(unique.values(), key=lambda r: r.get("timestamp", ""))
+        if ordered:
+            self._write(ordered)
+        return len(ordered)
+
     def update(self, run_id: str, **fields) -> dict:
         records = self.load()
         for record in records:

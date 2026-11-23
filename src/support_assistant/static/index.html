@@ -240,6 +240,7 @@
   <!-- =============================== GERAR =============================== -->
   <section id="view-generate" class="split" aria-label="Gerar">
     <form class="panel pad side" id="form" novalidate>
+      <div class="note" id="demo-note" hidden></div>
       <div class="eyebrow">Cenário</div>
 
       <div class="stack">
@@ -425,6 +426,7 @@ async function init() {
   $("env-params").hidden = false;
   $("brand-sub").textContent = `engenharia de prompt · ${o.versions.length} versões`;
   $("history-path").replaceChildren("Histórico salvo em ", el("code", {text: o.history_path}));
+  showLimits(o.limits || {});
 
   for (const c of o.customers) $("customer").append(el("option", {value: c.id, text: c.name}));
   for (const t of o.tickets) $("ticket").append(el("option", {value: t.id, text: `${t.id} · ${t.title}`}));
@@ -454,6 +456,21 @@ async function init() {
     if (open) $("ticket_text").focus();
   });
   showCustomer(); showTicket(); updateSubmit();
+}
+
+/** Instalação pública (deploy): mostra os limites e esconde o que estiver desligado. */
+function showLimits(l) {
+  const parts = [];
+  if (l.rate_limit) parts.push(`até ${l.rate_limit} gerações por pessoa a cada ${Math.round(l.rate_window_seconds / 60)} min`);
+  if (l.daily_model_calls) parts.push(`${l.model_calls_left_today} de ${l.daily_model_calls} chamadas ao modelo restantes hoje`);
+  if (parts.length) {
+    $("demo-note").replaceChildren(infoIcon(), el("span", {}, [el("b", {text: "Demonstração pública. "}),
+      `${parts.join(" · ")}. Resultados do cache não contam; os cenários de samples/ já estão no cache.`]));
+    $("demo-note").hidden = false;
+  }
+  if (l.allow_evaluation === false) {
+    $("compare-btn").textContent = "Comparar";
+  }
 }
 
 function showCustomer() {
@@ -747,7 +764,8 @@ function renderRubric(run) {
   });
   refreshTotal();
   const cached = run.cache_hit;
-  const save = el("button", {type: "submit", class: "primary", style: "margin-left: auto; font-size: 14px", text: "Salvar avaliação", disabled: cached});
+  const locked = (state.options.limits || {}).allow_evaluation === false;
+  const save = el("button", {type: "submit", class: "primary", style: "margin-left: auto; font-size: 14px", text: "Salvar avaliação", disabled: cached || locked});
   form.onsubmit = async (event) => {
     event.preventDefault();
     const scores = {};
@@ -772,6 +790,7 @@ function renderRubric(run) {
     el("div", {class: "row", style: "justify-content: space-between"}, [el("h2", {text: "Rubrica"}),
       el("span", {class: "small muted", text: "1 insuficiente · 3 adequado · 5 excelente"})]),
     cached ? el("div", {class: "box warn", text: `Este registro veio do cache. Avalie a execução original ${run.source_run_id}.`}) : null,
+    locked ? el("div", {class: "box warn", text: "A gravação de notas está desligada nesta instalação. As notas abaixo são só para consulta."}) : null,
     ...blocks,
     el("div", {class: "row"}, [el("span", {class: "small"}, ["Total ", total, " /15"]), save]),
   );

@@ -23,12 +23,15 @@ import os
 import socket
 import sys
 import threading
+import time
+from collections import deque
+from datetime import datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .config import ConfigError, load_settings
+from .config import PROJECT_ROOT, ConfigError, WebSettings, load_settings, load_web_settings
 from .content_types import CONTENT_TYPES
 from .data_loader import DataValidationError, load_customers, load_tickets, make_adhoc_ticket
 from .evaluation import (
@@ -43,7 +46,7 @@ from .evaluation import (
 from .formatting import render_output
 from .history import HistoryError, RunNotFound
 from .llm_client import LLMError
-from .observability import history_stats
+from .observability import history_stats, log_event
 from .prompt_engine import DEFAULT_VERSION, PromptEngine, PromptError
 from .service import AssistantService
 
@@ -64,15 +67,92 @@ class NotFound(LookupError):
     """Execução ou rota inexistente (vira HTTP 404)."""
 
 
+class Forbidden(PermissionError):
+    """Ação desativada nesta instalação (vira HTTP 403)."""
+
+
+class TooManyRequests(RuntimeError):
+    """Limite de gerações por pessoa atingido (vira HTTP 429 com Retry-After)."""
+
+    def __init__(self, message: str, retry_after: int) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+class RateLimiter:
+    """Janela deslizante por chave (IP): no máximo ``limit`` eventos a cada ``window`` segundos."""
+
+    def __init__(self, limit: int, window: int, clock=time.monotonic) -> None:
+        self.limit, self.window, self.clock = limit, window, clock
+        self._events: dict[str, deque] = {}
+        self._lock = threading.Lock()
+
+    def check(self, key: str) -> None:
+        if self.limit <= 0:
+            return
+        now = self.clock()
+        with self._lock:
+            events = self._events.setdefault(key, deque())
+            while events and now - events[0] >= self.window:
+                events.popleft()
+            if len(events) >= self.limit:
+                retry = int(self.window - (now - events[0])) + 1
+                raise TooManyRequests(
+                    f"Limite de {self.limit} gerações a cada {_duration(self.window)} atingido. "
+                    f"Tente de novo em {_duration(retry)}; resultados já gerados continuam no histórico.", retry)
+            events.append(now)
+            if len(self._events) > 10_000:  # não deixa a memória crescer com IPs antigos
+                for k in [k for k, v in self._events.items() if not v or now - v[-1] >= self.window]:
+                    del self._events[k]
+
+
 class App:
     """Lógica das rotas, separada do servidor HTTP para poder ser testada sem rede."""
 
-    def __init__(self, service: AssistantService | None = None) -> None:
+    def __init__(self, service: AssistantService | None = None, web: WebSettings | None = None) -> None:
         self.service = service or AssistantService(load_settings(require_api_key=False))
+        self.web = web or WebSettings()
         self.engine: PromptEngine = self.service.engine
         self.customers = load_customers()
         self.tickets = load_tickets()
         self._lock = threading.Lock()
+        self.limiter = RateLimiter(self.web.rate_limit, self.web.rate_window_seconds)
+        if self.web.daily_model_calls > 0:
+            self.service.can_call_model = lambda: self.model_calls_today() < self.web.daily_model_calls
+        if self.web.seed_samples:
+            seeded = self.service.store.seed(_sample_records())
+            if seeded:
+                log_event("history_seeded", records=seeded)
+
+    def model_calls_today(self) -> int:
+        """Chamadas reais ao modelo hoje (fuso do servidor). Registros de demonstração não contam."""
+        now = datetime.now().astimezone()
+        count = 0
+        for r in self.service.store.load():
+            if r.get("cache_hit") or r.get("seeded"):
+                continue
+            try:
+                when = datetime.fromisoformat(str(r.get("timestamp")))
+            except ValueError:
+                continue
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=now.tzinfo)
+            if when.astimezone(now.tzinfo).date() == now.date():
+                count += 1
+        return count
+
+    def health(self) -> dict:
+        return {"status": "ok", "default_version": DEFAULT_VERSION}
+
+    def limits(self) -> dict:
+        cap = self.web.daily_model_calls
+        return {
+            "rate_limit": self.web.rate_limit,
+            "rate_window_seconds": self.web.rate_window_seconds,
+            "daily_model_calls": cap,
+            "model_calls_left_today": max(0, cap - self.model_calls_today()) if cap else None,
+            "allow_evaluation": self.web.allow_evaluation,
+        }
 
     def options(self) -> dict:
         return {
@@ -95,9 +175,10 @@ class App:
             "model": f"{self.service.settings.provider}/{self.service.settings.model}",
             "generation_params": self.service.settings.generation_params(),
             "history_path": str(self.service.store.path),
+            "limits": self.limits(),
         }
 
-    def generate(self, body: dict) -> dict:
+    def generate(self, body: dict, client: str = "local") -> dict:
         customer = self.customers.get(body.get("customer_id"))
         if customer is None:
             raise BadRequest("perfil inválido")
@@ -120,6 +201,7 @@ class App:
         if not versions or any(v not in available for v in versions):
             raise BadRequest("versões de prompt inválidas")
         use_cache = body.get("use_cache", True) is not False
+        self.limiter.check(client)  # depois da validação: pedido inválido não gasta a cota
 
         results = []
         with self._lock:
@@ -154,6 +236,8 @@ class App:
         return {**record, "rendered": render_output(record["content_type"], record["output"], wrap=False)}
 
     def evaluate(self, body: dict) -> dict:
+        if not self.web.allow_evaluation:
+            raise Forbidden("A avaliação pela web está desativada nesta instalação (WEB_ALLOW_EVALUATION=false).")
         run_id = body.get("run_id")
         raw = body.get("scores")
         if not isinstance(run_id, str) or not run_id:
@@ -194,7 +278,7 @@ class App:
             except EvaluationError as exc:
                 raise BadRequest(str(exc)) from None
             saved_to = None
-            if body.get("save", True) is not False:
+            if body.get("save", True) is not False and self.web.allow_evaluation:
                 path = default_comparison_path(self.service.settings.output_dir, comparison)
                 saved_to = str(save_comparison(comparison, path))
         return {"comparison": comparison, "saved_to": saved_to}
@@ -218,6 +302,7 @@ def make_handler(app: App):
             query = parse_qs(url.query)
             routes = {
                 "/api/options": app.options,
+                "/api/health": app.health,
                 "/api/stats": app.stats,
                 "/api/history": lambda: app.history(query),
                 "/api/run": lambda: app.run(query),
@@ -229,7 +314,11 @@ def make_handler(app: App):
             self._send_json({"error": "rota não encontrada"}, HTTPStatus.NOT_FOUND)
 
         def do_POST(self) -> None:  # noqa: N802
-            routes = {"/api/generate": app.generate, "/api/evaluate": app.evaluate, "/api/compare": app.compare}
+            routes = {
+                "/api/generate": lambda body: app.generate(body, client=self._client_id()),
+                "/api/evaluate": app.evaluate,
+                "/api/compare": app.compare,
+            }
             action = routes.get(urlparse(self.path).path)
             if action is None:
                 return self._send_json({"error": "rota não encontrada"}, HTTPStatus.NOT_FOUND)
@@ -244,6 +333,11 @@ def make_handler(app: App):
                 self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
             except NotFound as exc:
                 self._send_json({"error": str(exc)}, HTTPStatus.NOT_FOUND)
+            except Forbidden as exc:
+                self._send_json({"error": str(exc)}, HTTPStatus.FORBIDDEN)
+            except TooManyRequests as exc:
+                self._send_json({"error": str(exc)}, HTTPStatus.TOO_MANY_REQUESTS,
+                                {"Retry-After": str(exc.retry_after)})
             except (ConfigError, DataValidationError, PromptError, HistoryError, LLMError) as exc:
                 self._send_json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
@@ -264,13 +358,28 @@ def make_handler(app: App):
                 raise BadRequest("o corpo deve ser um objeto JSON")
             return data
 
-        def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
+        def _client_id(self) -> str:
+            """IP de quem pediu. Atrás do proxy da plataforma, vem no X-Forwarded-For (só se confiável)."""
+            if app.web.trust_proxy:
+                forwarded = (self.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+                if forwarded:
+                    return forwarded[:64]
+            return self.client_address[0]
+
+        def _security_headers(self) -> None:
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("X-Frame-Options", "DENY")
+
+        def _send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK, extra: dict | None = None) -> None:
             body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
-            self.send_header("X-Content-Type-Options", "nosniff")
+            for name, value in (extra or {}).items():
+                self.send_header(name, value)
+            self._security_headers()
             self.end_headers()
             self.wfile.write(body)
 
@@ -279,9 +388,9 @@ def make_handler(app: App):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
-            self.send_header("X-Content-Type-Options", "nosniff")
+            self._security_headers()
             self.send_header("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; "
-                                                        "script-src 'self' 'unsafe-inline'")
+                                                        "script-src 'self' 'unsafe-inline'; frame-ancestors 'none'")
             self.end_headers()
             self.wfile.write(body)
 
@@ -313,8 +422,11 @@ def make_server(app: App, host: str, port: int) -> ExclusiveHTTPServer:
     return ExclusiveHTTPServer((host, port), make_handler(app))
 
 
-def serve(host: str = "127.0.0.1", port: int = 8000) -> int:
-    app = App()
+def serve(host: str | None = None, port: int | None = None) -> int:
+    """Sobe a interface. Host e porta vêm dos argumentos, senão de HOST/PORT, senão 127.0.0.1:8000."""
+    web = load_web_settings()
+    host, port = host or web.host, port or web.port
+    app = App(web=web)
     try:
         server = make_server(app, host, port)
     except OSError as exc:
@@ -322,8 +434,14 @@ def serve(host: str = "127.0.0.1", port: int = 8000) -> int:
               f"programa ou bloqueada ({exc.strerror or exc}).\n"
               f"Escolha outra porta, por exemplo: python main.py web --port {port + 1}", file=sys.stderr)
         return 1
-    print(f"Interface web em http://{host}:{port}  (Ctrl+C para parar)")
-    print(f"Modelo: {app.options()['model']}  |  histórico: {app.service.store.path}")
+    print(f"Interface web em http://{host}:{port}  (Ctrl+C para parar)", flush=True)
+    print(f"Modelo: {app.options()['model']}  |  histórico: {app.service.store.path}", flush=True)
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        limits = app.limits()
+        print(f"Aberta para a rede ({host}). Limites: {limits['rate_limit'] or 'sem limite'} gerações por pessoa "
+              f"a cada {_duration(limits['rate_window_seconds'])}; teto diário de chamadas: "
+              f"{limits['daily_model_calls'] or 'sem teto'}; avaliação pela web: "
+              f"{'ligada' if limits['allow_evaluation'] else 'desligada'}.", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -358,6 +476,29 @@ def _summary(r: dict) -> dict:
         # Execuções com o mesmo cenário podem ser comparadas entre si (só a versão muda).
         "scenario": _scenario_key(r),
     }
+
+
+def _sample_records() -> list[dict]:
+    """Todos os registros de histórico guardados em samples/ (arquivos que são listas de registros)."""
+    records = []
+    for path in sorted((PROJECT_ROOT / "samples").rglob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(data, list):
+            records += [r for r in data if isinstance(r, dict)]
+    return records
+
+
+def _duration(seconds: int) -> str:
+    if seconds >= 3600 and seconds % 3600 == 0:
+        hours = seconds // 3600
+        return "1 hora" if hours == 1 else f"{hours} horas"
+    if seconds >= 60:
+        minutes = -(-seconds // 60)
+        return "1 minuto" if minutes == 1 else f"{minutes} minutos"
+    return "1 segundo" if seconds == 1 else f"{seconds} segundos"
 
 
 def _scenario_key(r: dict) -> str:

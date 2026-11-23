@@ -86,6 +86,45 @@ def load_settings(require_api_key: bool = True, env_file: Path | None = None) ->
     )
 
 
+@dataclass(frozen=True)
+class WebSettings:
+    """Configuração da interface web. Os padrões servem para uso local; o deploy muda pelo ambiente."""
+
+    host: str = "127.0.0.1"
+    port: int = 8000
+    trust_proxy: bool = False          # usar X-Forwarded-For (atrás do proxy de uma plataforma de nuvem)
+    rate_limit: int = 0                # gerações por janela por pessoa (IP); 0 = sem limite
+    rate_window_seconds: int = 3600
+    daily_model_calls: int = 0         # teto de chamadas reais ao modelo por dia; 0 = sem teto
+    seed_samples: bool = False         # histórico vazio começa com as execuções de samples/
+    allow_evaluation: bool = True      # permitir gravar notas e comparações pela web
+
+
+def load_web_settings(env_file: Path | None = None) -> WebSettings:
+    load_dotenv(env_file or PROJECT_ROOT / ".env")
+    return WebSettings(
+        host=os.getenv("HOST", "").strip() or "127.0.0.1",
+        port=_number("PORT", 8000, int, 1, 65535),
+        trust_proxy=_flag("WEB_TRUST_PROXY", False),
+        rate_limit=_number("WEB_RATE_LIMIT", 0, int, 0, 10_000),
+        rate_window_seconds=_number("WEB_RATE_WINDOW_SECONDS", 3600, int, 1, 86_400),
+        daily_model_calls=_number("WEB_DAILY_MODEL_CALLS", 0, int, 0, 1_000_000),
+        seed_samples=_flag("WEB_SEED_SAMPLES", False),
+        allow_evaluation=_flag("WEB_ALLOW_EVALUATION", True),
+    )
+
+
+def _flag(name: str, default: bool) -> bool:
+    raw = os.getenv(name, "").strip().lower()
+    if not raw:
+        return default
+    if raw in ("1", "true", "sim", "yes", "on"):
+        return True
+    if raw in ("0", "false", "nao", "não", "no", "off"):
+        return False
+    raise ConfigError(f"{name} deve ser true ou false; recebido {raw!r}.")
+
+
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 
 
