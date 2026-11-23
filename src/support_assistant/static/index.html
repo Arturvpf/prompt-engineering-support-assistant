@@ -179,6 +179,8 @@
 
   /* ---------- avaliar ---------- */
   .table-wrap { overflow-x: auto; }
+  .table-wrap.scroll { max-height: 380px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .table-wrap.scroll th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { text-align: left; color: var(--muted); font-weight: 600; padding: 10px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
   td { padding: 10px 8px; border-bottom: 1px solid var(--sunken); vertical-align: middle; }
@@ -299,7 +301,7 @@
         </label>
       </div>
       <p class="small muted" style="margin: 0">Avalie cada execução com a rubrica. Para comparar, marque execuções avaliadas do mesmo cenário (registros do cache não entram: avalie a execução original).</p>
-      <div class="table-wrap" id="scenario-runs"></div>
+      <div class="table-wrap scroll" id="scenario-runs" tabindex="0" aria-label="Execuções do cenário"></div>
     </div>
 
     <div class="split" id="eval-area" hidden>
@@ -401,13 +403,19 @@ $("theme").addEventListener("click", () => {
 });
 
 // ------------------------------------------------------------------ navegação
-function showView(name) {
+const VIEW_SLUGS = {generate: "gerar", evaluate: "avaliar", history: "historico"};
+
+function showView(name, {load = true} = {}) {
   for (const b of document.querySelectorAll(".nav button")) {
     if (b.dataset.view === name) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
   }
   for (const v of ["generate", "evaluate", "history"]) $(`view-${v}`).hidden = v !== name;
-  if (name === "evaluate") loadScenarios();
-  if (name === "history") loadHistoryView();
+  setHash(VIEW_SLUGS[name]);
+  if (load && name === "evaluate") loadScenarios();
+  if (load && name === "history") loadHistoryView();
+}
+function setHash(value) {
+  try { history.replaceState(null, "", `#${value}`); } catch (_) { /* sem history API */ }
 }
 for (const b of document.querySelectorAll(".nav button")) b.addEventListener("click", () => showView(b.dataset.view));
 
@@ -491,8 +499,9 @@ function updateSubmit() {
 }
 
 // ------------------------------------------------------------------ gerar
-$("form").addEventListener("submit", async (event) => {
-  event.preventDefault();
+$("form").addEventListener("submit", (event) => { event.preventDefault(); runGenerate(); });
+
+async function runGenerate() {
   const types = checkedValues("type"), versions = checkedValues("version");
   if (!types.length || !versions.length) return;
   const out = $("results");
@@ -516,7 +525,7 @@ $("form").addEventListener("submit", async (event) => {
   } finally {
     updateSubmit();
   }
-});
+}
 
 function renderResults() {
   const rs = state.results;
@@ -714,13 +723,14 @@ function renderScenarioRuns() {
 }
 
 async function openEvaluation(runId) {
-  showView("evaluate");
+  showView("evaluate", {load: false});
   await loadScenarios(runId);
 }
 
 async function openRun(runId) {
   try {
     const run = state.evalRun = await api(`/api/run?id=${encodeURIComponent(runId)}`);
+    setHash(`avaliar?run=${encodeURIComponent(run.run_id)}`);
     renderScenarioRuns();
     const out = $("eval-output");
     out.replaceChildren(
@@ -730,7 +740,10 @@ async function openRun(runId) {
     );
     renderRubric(run);
     $("eval-area").hidden = false;
-    $("eval-area").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
+    // Aberto por link (#avaliar?run=...): a página já começa na tela certa, sem rolar.
+    if (!state.fromLink) $("eval-area").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
+    const row = document.querySelector("#scenario-runs tr.selected");
+    if (row) row.scrollIntoView({block: "nearest"});
   } catch (err) {
     toast(`Não foi possível abrir: ${err.message}`);
   }
@@ -786,14 +799,15 @@ function renderRubric(run) {
       save.disabled = false;
     }
   };
-  form.replaceChildren(
+  // replaceChildren converte null em texto ("null"); só os nós que existem entram.
+  form.replaceChildren(...[
     el("div", {class: "row", style: "justify-content: space-between"}, [el("h2", {text: "Rubrica"}),
       el("span", {class: "small muted", text: "1 insuficiente · 3 adequado · 5 excelente"})]),
     cached ? el("div", {class: "box warn", text: `Este registro veio do cache. Avalie a execução original ${run.source_run_id}.`}) : null,
     locked ? el("div", {class: "box warn", text: "A gravação de notas está desligada nesta instalação. As notas abaixo são só para consulta."}) : null,
     ...blocks,
     el("div", {class: "row"}, [el("span", {class: "small"}, ["Total ", total, " /15"]), save]),
-  );
+  ].filter(Boolean));
 }
 
 function updateCompare() {
@@ -897,7 +911,56 @@ function renderHistoryTable() {
 }
 for (const id of ["f-customer", "f-version", "f-evaluated"]) $(id).addEventListener("change", renderHistoryTable);
 
-init().catch((err) => {
+/**
+ * Links diretos para uma tela, úteis para compartilhar ou documentar:
+ *   #gerar?cliente=joao-leigo-chat&ticket=T004&versoes=v2,v3&tipos=diagnosis&aba=flow_summary&gerar=1
+ *   #avaliar?run=b767498dbb1c&comparar=id1,id2,...   (comparar mostra uma prévia, sem salvar)
+ *   #historico
+ * Qualquer tela aceita &tema=claro|escuro. Valores fora das opções são ignorados.
+ */
+async function applyHash() {
+  const [slug, query] = decodeURIComponent(location.hash.slice(1)).split("?");
+  const p = new URLSearchParams(query || "");
+  if (p.get("tema") === "escuro") applyTheme("dark");
+  if (p.get("tema") === "claro") applyTheme("light");
+  const list = (name) => (p.get(name) || "").split(",").map((s) => s.trim()).filter(Boolean);
+
+  if (slug === "historico") return showView("history");
+  if (slug === "avaliar") {
+    showView("evaluate", {load: false});
+    state.fromLink = true;
+    await loadScenarios(p.get("run") || undefined);
+    state.fromLink = false;
+    const ids = list("comparar");
+    if (ids.length >= 2) {
+      state.selected = new Set(ids);
+      renderScenarioRuns();
+      try {
+        const res = await api("/api/compare", {run_ids: ids, save: false});
+        renderComparison(res.comparison, null);
+      } catch (err) {
+        $("compare-result").replaceChildren(el("div", {class: "error", text: err.message}));
+      }
+    }
+    return;
+  }
+  if (slug !== "gerar") return;
+  const o = state.options;
+  if (o.customers.some((c) => c.id === p.get("cliente"))) $("customer").value = p.get("cliente");
+  if (o.tickets.some((t) => t.id === p.get("ticket"))) $("ticket").value = p.get("ticket");
+  for (const [name, param] of [["type", "tipos"], ["version", "versoes"]]) {
+    const wanted = list(param);
+    if (wanted.length) for (const box of document.querySelectorAll(`input[name=${name}]`)) box.checked = wanted.includes(box.value);
+  }
+  showCustomer(); showTicket(); updateSubmit();
+  if (p.get("gerar") === "1") {
+    await runGenerate();
+    const tab = p.get("aba");
+    if (tab && state.results.some((r) => r.content_type === tab)) { state.activeType = tab; renderResults(); }
+  }
+}
+
+init().then(applyHash).catch((err) => {
   $("env-model").textContent = "erro ao carregar";
   $("results").replaceChildren(el("div", {class: "error", role: "alert", text: `Não foi possível carregar as opções: ${err.message}`}));
 });
