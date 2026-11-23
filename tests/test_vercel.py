@@ -85,6 +85,27 @@ def test_wsgi_generate_from_the_seeded_cache_and_rate_limit(vercel_module):
     assert status == 429 and int(headers["Retry-After"]) > 0
 
 
+def test_unwritable_output_dir_falls_back_to_the_temp_dir(monkeypatch, tmp_path, capsys):
+    """Um OUTPUT_DIR que não aceita escrita (o ``outputs`` do .env na Vercel) não derruba a função."""
+    import tempfile
+
+    blocker = tmp_path / "arquivo"
+    blocker.write_text("não é pasta", encoding="utf-8")
+    monkeypatch.setenv("OUTPUT_DIR", str(blocker / "outputs"))
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path / "sys-tmp"))
+    for name in ("WEB_RATE_LIMIT", "WEB_DAILY_MODEL_CALLS", "WEB_SEED_SAMPLES", "WEB_TRUST_PROXY"):
+        monkeypatch.delenv(name, raising=False)
+    spec = importlib.util.spec_from_file_location("vercel_index_fallback", ROOT / "api" / "index.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    expected = tmp_path / "sys-tmp" / "outputs"
+    assert module.assistant.service.settings.output_dir == expected
+    assert (expected / "history.json").exists(), "o histórico semeado foi gravado no diretório temporário"
+    assert "não aceita escrita" in capsys.readouterr().err
+    assert call(module.app, "GET", "/api/health")[0] == 200
+
+
 def test_vercel_config_bundles_what_the_function_reads():
     config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
     include = config["functions"]["api/index.py"]["includeFiles"]

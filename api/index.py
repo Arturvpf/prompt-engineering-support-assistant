@@ -7,7 +7,9 @@ do servidor local: a aplicação é a mesma em ``python main.py web``, no contai
 Diferenças da plataforma, tratadas por variáveis de ambiente com padrões seguros:
 
 - só ``/tmp`` aceita escrita, e cada instância começa do zero: o histórico fica em
-  ``/tmp/outputs`` e é semeado com as execuções de ``samples/`` (demonstração);
+  ``/tmp/outputs`` e é semeado com as execuções de ``samples/`` (demonstração). Um
+  ``OUTPUT_DIR`` que não aceite escrita (por exemplo, o ``outputs`` do ``.env`` local)
+  é trocado por ``/tmp/outputs`` em vez de derrubar a função;
 - a instalação é pública: limite por pessoa (IP do ``X-Forwarded-For``) e teto
   diário de chamadas ao modelo, os dois valendo por instância;
 - a chave da API vem das variáveis do projeto na Vercel, nunca do repositório.
@@ -17,6 +19,7 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,6 +36,30 @@ for name, value in {
     "LOG_LEVEL": "INFO",
 }.items():
     os.environ.setdefault(name, value)
+
+
+def _writable_output_dir(value: str) -> str:
+    """Devolve ``value`` se der para gravar lá; senão, ``<tmp>/outputs``.
+
+    Na Vercel só o diretório temporário aceita escrita. Um ``OUTPUT_DIR`` herdado do
+    ``.env`` local (``outputs``, relativo) apontaria para o pacote, somente leitura,
+    e a função cairia ao iniciar. Aqui ela segue no ar e o aviso vai para os logs.
+    """
+    path = Path(value)
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        probe = path / ".write-test"
+        probe.write_text("", encoding="utf-8")
+        probe.unlink()
+        return value
+    except OSError as exc:
+        fallback = str(Path(tempfile.gettempdir()) / "outputs")
+        print(f"OUTPUT_DIR={value!r} não aceita escrita ({exc.strerror or exc}); usando {fallback}.",
+              file=sys.stderr)
+        return fallback
+
+
+os.environ["OUTPUT_DIR"] = _writable_output_dir(os.environ["OUTPUT_DIR"])
 
 from support_assistant.config import load_settings, load_web_settings  # noqa: E402
 from support_assistant.observability import configure_logging  # noqa: E402
