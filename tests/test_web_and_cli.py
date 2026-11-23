@@ -207,3 +207,12 @@ def test_cache_hit_carries_the_original_evaluation(app):
     again = app.generate(body)["results"][0]
     assert again["cache_hit"] is True and again["evaluation"] is None
     assert again["source_evaluation"]["total"] == 12
+
+
+def test_paths_shown_by_the_web_do_not_expose_user_folders(app):
+    from support_assistant.web import _display_path
+    from support_assistant.config import PROJECT_ROOT
+
+    assert _display_path(PROJECT_ROOT / "outputs" / "history.json") == "outputs/history.json"
+    shown = app.options()["history_path"]
+    assert ":" not in shown and not shown.startswith("/") and shown.endswith("history.json")

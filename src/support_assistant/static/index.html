@@ -852,7 +852,7 @@ function renderRubric(run) {
         level.textContent = scale[n];
         refreshTotal();
       }}));
-    const text = el("textarea", {id: `j-${c.id}`, rows: 2, maxlength: 1000, name: c.id, value: (current[c.id] || {}).justification || ""});
+    const text = el("textarea", {id: `j-${c.id}`, rows: 4, maxlength: 1000, name: c.id, value: (current[c.id] || {}).justification || ""});
     return el("div", {class: "criterion"}, [
       el("h4", {text: c.label, style: "color: var(--ink)"}), el("span", {class: "q", text: c.description}),
       el("div", {class: "scale", role: "radiogroup", "aria-label": c.label}, [...buttons, level]),

@@ -174,7 +174,7 @@ class App:
             },
             "model": f"{self.service.settings.provider}/{self.service.settings.model}",
             "generation_params": self.service.settings.generation_params(),
-            "history_path": str(self.service.store.path),
+            "history_path": _display_path(self.service.store.path),
             "limits": self.limits(),
         }
 
@@ -224,7 +224,7 @@ class App:
                             extra["source_evaluation"] = None
                     results.append({**record, **extra,
                                     "rendered": render_output(content_type, record["output"], wrap=False)})
-        return {"results": results, "history_path": str(self.service.store.path)}
+        return {"results": results, "history_path": _display_path(self.service.store.path)}
 
     def history(self, query: dict) -> dict:
         def arg(name: str) -> str:
@@ -484,6 +484,14 @@ def _summary(r: dict) -> dict:
         # Execuções com o mesmo cenário podem ser comparadas entre si (só a versão muda).
         "scenario": _scenario_key(r),
     }
+
+
+def _display_path(path: Path) -> str:
+    """Caminho relativo ao projeto quando possível: a página não expõe pastas do usuário ou do servidor."""
+    try:
+        return path.resolve().relative_to(PROJECT_ROOT.resolve()).as_posix()
+    except ValueError:
+        return path.name
 
 
 def _sample_records() -> list[dict]:
