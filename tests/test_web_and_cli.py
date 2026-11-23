@@ -1,13 +1,13 @@
 import json
+import socket
 import threading
 import urllib.error
 import urllib.request
-from http.server import ThreadingHTTPServer
 
 import pytest
 
 from support_assistant.cli import main
-from support_assistant.web import App, BadRequest, make_handler
+from support_assistant.web import App, BadRequest, make_server
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def test_generate_rejects_bad_input(app, body):
 
 
 def test_http_roundtrip(app):
-    server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(app))
+    server = make_server(app, "127.0.0.1", 0)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{server.server_address[1]}"
     try:
@@ -74,6 +74,29 @@ def test_http_roundtrip(app):
     finally:
         server.shutdown()
         server.server_close()
+
+
+@pytest.fixture
+def busy_port():
+    """Uma porta já ocupada por outro programa (socket com as opções padrão)."""
+    other = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    other.bind(("127.0.0.1", 0))
+    other.listen()
+    try:
+        yield other.getsockname()[1]
+    finally:
+        other.close()
+
+
+def test_server_refuses_a_port_in_use(app, busy_port):
+    with pytest.raises(OSError):
+        make_server(app, "127.0.0.1", busy_port)
+
+
+def test_cli_web_reports_port_in_use(capsys, busy_port):
+    assert main(["web", "--port", str(busy_port)]) == 1
+    err = capsys.readouterr().err
+    assert "porta está em uso" in err and f"--port {busy_port + 1}" in err
 
 
 def test_cli_list_and_invalid_input(capsys):
