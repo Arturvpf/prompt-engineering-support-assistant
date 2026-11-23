@@ -22,6 +22,16 @@ Também há:
 
 As decisões de prompt, as comparações v1 × v2 e v2 × v3 e as limitações estão em [PROMPT_ENGINEERING_NOTES.md](PROMPT_ENGINEERING_NOTES.md).
 
+![Interface web: o mesmo cliente e ticket com os prompts v2 e v3 lado a lado. Na v3 o diagnóstico traz hipóteses marcadas como inferidas, e o rodapé de cada card diz que o resultado veio do cache, com o run_id original e o do registro novo.](docs/images/gerar-v2-v3.png)
+
+*João Pereira (leigo, direto, chat) com o ticket T004 nos prompts v2 e v3. A v3 levanta o bloqueio de segurança por aparelho novo, uma causa que o cliente não citou, marcada como **inferida**.*
+
+## Sumário
+
+- [Requisitos](#requisitos) · [Setup](#setup) · [Variáveis do `.env`](#variáveis-do-env)
+- [Como usar](#como-usar): [linha de comando](#linha-de-comando), [avaliação e comparação](#histórico-avaliação-e-comparação), [interface web](#interface-web), [métricas e logs](#métricas-e-logs), [testes](#testes)
+- [Arquitetura](#arquitetura) · [Deploy](#deploy) · [Segurança](#segurança) · [Limitações conhecidas](#limitações-conhecidas)
+
 ---
 
 ## Requisitos
@@ -80,6 +90,8 @@ python main.py list
 | `LLM_MAX_RETRIES` | `3` | novas tentativas em 408, 429, 5xx e falhas de rede |
 | `OUTPUT_DIR` | `outputs` | pasta do `history.json` (histórico e cache) e de `logs/events.jsonl` |
 | `LOG_LEVEL` | `WARNING` | eventos mostrados no terminal (`DEBUG`, `INFO`, `WARNING`, `ERROR`); o arquivo de eventos registra sempre a partir de `INFO` |
+
+As variáveis da interface web (`HOST`, `PORT` e `WEB_*`) só importam para expor a web na rede. Elas estão na seção [Deploy](#como-a-instalação-pública-se-protege) e comentadas no `.env.example`.
 
 ---
 
@@ -164,7 +176,7 @@ OUTPUT_DIR=demo python main.py history
 OUTPUT_DIR=demo python main.py compare a2cf94288d19 524bbca9b910 39d4ea594be4 9c2cf899bd60 ca699d54d804 62960c793a80 1e5783f19ae3 a050cc3c5fa8 --verdict "..."
 ```
 
-O resultado é a mesma tabela de `samples/comparison_v1_v2_joao-leigo-chat_T004.json`: v1 = 38, v2 = 49.
+O resultado é a mesma tabela de `samples/comparison_v1_v2_joao-leigo-chat_T004.json`: v1 = 38, v2 = 49. A mesma comparação também pode ser feita pela [interface web](#interface-web).
 
 Para a comparação v2 × v3, use `samples/history_comparison_v2_v3_joao-leigo-chat_T004.json` do mesmo jeito, com estes `run_id`. O resultado é v2 = 49, v3 = 51:
 
@@ -179,21 +191,56 @@ python main.py web            # abre em http://127.0.0.1:8000
 python main.py web --port 8080
 ```
 
-A interface tem três telas:
+A interface tem três telas.
 
-- **Gerar.**
-  - Escolha o cliente e o ticket (ou escreva um novo), os tipos de conteúdo e as versões do prompt.
-  - Os resultados aparecem por tipo, com as versões lado a lado. Cada tipo tem uma apresentação própria: hipóteses com probabilidade e marca de "inferida", passos numerados com resultado esperado, perguntas com motivo e onde encontrar, e o fluxograma com os pontos de decisão.
-  - O rodapé de cada card diz de onde veio o resultado. Exemplos: "Do cache · sem chamada à API · original `524bbca9b910` · este registro `47f9470ec7af`" ou "Gerado agora · 3,3 s · 1.668 tokens · 1 tentativa". Na v3, também mostra qual diagnóstico alimentou o prompt.
-- **Avaliar e comparar.**
-  - Mostra as execuções de um cenário (mesmo cliente, ticket, modelo e parâmetros). Você dá as notas da rubrica na própria tela, com justificativa obrigatória.
-  - Também dá para marcar execuções avaliadas e gerar a comparação, salva em `outputs/comparisons/`.
-  - O "Avaliar" de um resultado vindo do cache abre a execução original.
-- **Histórico e métricas.** Chamadas, cache hits, tokens gastos e economizados, tokens médios por tipo e versão, e a lista de execuções com filtros.
+#### Gerar
 
-A web usa o mesmo serviço, histórico e cache da CLI. Tudo o que vem do modelo é inserido como texto (`textContent`), nunca como HTML. A página não carrega nada de fora (CSP `default-src 'self'`) e funciona offline. O servidor usa só a biblioteca padrão (`http.server`) e escuta em `127.0.0.1`, ou seja, só nesta máquina. O tema claro/escuro segue o sistema e tem um botão para alternar.
+- Escolha o cliente e o ticket (ou escreva um novo), os tipos de conteúdo e as versões do prompt.
+- Os resultados aparecem por tipo, com as versões lado a lado (imagem no topo deste README).
+- Cada tipo tem uma apresentação própria: hipóteses com probabilidade e marca de "inferida", passos numerados com resultado esperado, perguntas com motivo e onde encontrar, e o fluxograma com os pontos de decisão.
+- O rodapé de cada card diz de onde veio o resultado:
+  - "Do cache · sem chamada à API · original `524bbca9b910` · este registro `…`": quando veio do cache;
+  - "Gerado agora · 3,3 s · 1.668 tokens · 1 tentativa": quando chamou o modelo.
+- Na v3, mostra também qual diagnóstico alimentou o prompt.
 
-Rotas da API: `GET /api/options`, `POST /api/generate`, `GET /api/history`, `GET /api/run?id=`, `POST /api/evaluate`, `POST /api/compare`, `GET /api/stats`.
+![Aba Fluxograma em tema escuro: à esquerda a v2, com caixas desenhadas pelo modelo em linha reta; à direita a v3, desenhada pelo código a partir do grafo, com os dois ramos de cada decisão visíveis.](docs/images/fluxograma-v2-v3.png)
+
+*Fluxograma da v2 (desenhado pelo modelo, em linha reta e sem os ramos das decisões) e da v3 (o modelo devolve um grafo e o código desenha, com os dois ramos de cada decisão à vista).*
+
+#### Avaliar e comparar
+
+- Mostra as execuções de um cenário (mesmo cliente, ticket, modelo e parâmetros). Você dá as notas da rubrica na própria tela, com justificativa obrigatória. Uma execução já avaliada abre com as notas preenchidas.
+- O "Avaliar" de um resultado vindo do cache abre a execução original.
+- Marque execuções avaliadas para gerar a comparação, salva em `outputs/comparisons/`.
+
+![Tela de avaliação: a lista de execuções do cenário, o fluxograma da v3 e a rubrica com nota de 1 a 5 e justificativa para clareza, adequação ao cliente e acionabilidade.](docs/images/avaliar-rubrica.png)
+
+![Comparação v2 × v3 na interface: notas por critério e por tipo, delta do total e tokens, com v2 = 49, v3 = 51 e a v3 como vencedora.](docs/images/comparacao-v2-v3.png)
+
+#### Histórico e métricas
+
+Mostra chamadas ao modelo, cache hits, tokens gastos e economizados, tokens médios por tipo e versão, e a lista de execuções com filtros.
+
+![Tela de métricas: totais de chamadas, cache hits e tokens economizados; barras de tokens médios por tipo e versão (a v3 custa mais); e a lista de execuções com a origem de cada uma.](docs/images/historico-metricas.png)
+
+#### Links diretos
+
+Cada tela tem um endereço, útil para compartilhar ou documentar. As imagens acima foram geradas assim:
+
+| Link | Abre |
+|---|---|
+| `/#gerar?cliente=joao-leigo-chat&ticket=T004&versoes=v2,v3&aba=flow_summary&gerar=1` | gera (ou busca no cache) e mostra a aba escolhida |
+| `/#avaliar?run=b767498dbb1c` | a avaliação de uma execução |
+| `/#avaliar?run=…&comparar=id1,id2,…` | a avaliação e uma prévia da comparação, sem salvar |
+| `/#historico` | histórico e métricas |
+
+Qualquer link aceita `&tema=claro` ou `&tema=escuro`. Valores que não existem nas opções são ignorados.
+
+#### Como funciona
+
+A web usa o mesmo serviço, histórico e cache da CLI. Tudo o que vem do modelo é inserido como texto (`textContent`), nunca como HTML. A página não carrega nada de fora (CSP `default-src 'self'`) e funciona offline. O servidor usa só a biblioteca padrão (`http.server`). Por padrão, escuta em `127.0.0.1`, ou seja, só nesta máquina; para expor na rede, veja [Deploy](#deploy). O tema claro/escuro segue o sistema e tem um botão para alternar.
+
+Rotas da API: `GET /api/options`, `POST /api/generate`, `GET /api/history`, `GET /api/run?id=`, `POST /api/evaluate`, `POST /api/compare`, `GET /api/stats` e `GET /api/health`.
 
 Se a porta já estiver em uso, o comando termina com código 1 e sugere outra porta (`--port`). Ele não divide a porta com o outro programa, o que no Windows faria o navegador abrir a aplicação errada.
 
@@ -204,7 +251,7 @@ python main.py stats          # chamadas, cache hits, tokens gastos e economizad
 python main.py stats --json
 ```
 
-Cada geração, cache hit, nova tentativa de chamada, saída inválida e falha é gravada como uma linha JSON em `outputs/logs/events.jsonl`. Exemplo:
+Cada evento é gravado como uma linha JSON em `outputs/logs/events.jsonl`: geração, cache hit, nova tentativa de chamada, saída inválida, falha e, na web pública, chamada bloqueada pelo teto diário e histórico de demonstração carregado. Exemplo:
 
 ```json
 {"ts": "2026-11-22T13:25:01.811-03:00", "level": "INFO", "event": "cache_hit", "run_id": "b7ef3f592a98", "source_run_id": "a2cf94288d19", "tokens_saved": 747, "customer_id": "joao-leigo-chat", "ticket_id": "T004", "content_type": "diagnosis", "version": "v1", "model": "nvidia/nemotron-3.5-super-vl:free"}
@@ -255,7 +302,7 @@ São 134 testes. O modelo é substituído por um cliente falso, então os testes
 - rubrica e comparação (também pela API da web), configuração, web (incluindo porta em uso e erros 400/403/404/429) e CLI;
 - deploy: limite por pessoa, teto diário de chamadas (o cache não conta), histórico de demonstração a partir de `samples/` e configuração por variáveis de ambiente.
 
-O GitHub Actions roda os testes em Python 3.10 e 3.12 a cada push na `main` e em cada PR (`.github/workflows/tests.yml`).
+O GitHub Actions roda os testes em Python 3.10 e 3.12 a cada push na `main` e em cada PR (`.github/workflows/tests.yml`). Um segundo job constrói a imagem Docker, sobe o container sem chave e confere `/api/health` e o histórico de demonstração.
 
 ---
 
@@ -292,6 +339,7 @@ src/support_assistant/
   cli.py                     comandos interactive, list, generate, history, evaluate, compare, stats, web
   web.py, static/index.html  interface web local (biblioteca padrão): gerar, avaliar, comparar, histórico
 samples/                     exemplos de saída e as comparações v1 x v2 e v2 x v3 completas
+docs/images/                 capturas da interface usadas neste README
 tests/                       testes com pytest e cliente LLM falso
 ```
 
