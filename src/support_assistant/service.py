@@ -29,6 +29,10 @@ from .prompt_engine import PromptEngine, PromptPackage
 HISTORY_FILENAME = "history.json"
 
 
+class ModelCallBlocked(LLMError):
+    """O teto de chamadas ao modelo foi atingido; só resultados do cache estão disponíveis."""
+
+
 def cache_key(prompt: PromptPackage, generation_params: dict) -> str:
     material = {
         "prompt_fingerprint": prompt.fingerprint,
@@ -53,6 +57,8 @@ class AssistantService:
         self.store = store or HistoryStore(settings.output_dir / HISTORY_FILENAME)
         self._client_factory = client_factory
         self._client: LLMClient | None = None
+        # Consultado antes de cada chamada real ao modelo. A web pública usa para impor um teto diário.
+        self.can_call_model: Callable[[], bool] = lambda: True
 
     @property
     def client(self) -> LLMClient:
@@ -124,6 +130,12 @@ class AssistantService:
                       tokens_saved=saved, **scope)
             return record
 
+        if not self.can_call_model():
+            log_event("model_call_blocked", logging.WARNING, **scope)
+            raise ModelCallBlocked(
+                "Limite de chamadas ao modelo atingido nesta instalação. Resultados que já estão no cache "
+                "continuam disponíveis; tente de novo mais tarde."
+            )
         try:
             result = GENERATORS[content_type](self.client, self.engine, customer, ticket, version, upstream)
         except LLMError as exc:

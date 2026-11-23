@@ -22,3 +22,21 @@ jobs:
           cache: pip
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest -q
+
+  docker:
+    # Garante que a imagem de deploy constrói, sobe sem chave e responde na rota de saúde.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t support-assistant .
+      - run: docker run -d --name app -p 8000:8000 support-assistant
+      - name: health
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8000/api/health; then exit 0; fi
+            sleep 1
+          done
+          docker logs app
+          exit 1
+      - name: demonstração semeada a partir de samples/
+        run: curl -fsS http://127.0.0.1:8000/api/history | python3 -c "import json,sys; assert len(json.load(sys.stdin)['runs']) >= 20"

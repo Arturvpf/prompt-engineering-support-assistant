@@ -1,0 +1,24 @@
+# Blueprint do Render (https://render.com/docs/blueprint-spec): um serviço web grátis a partir do Dockerfile.
+# No painel: New > Blueprint > escolha este repositório. O Render pede o valor de OPENROUTER_API_KEY
+# (sync: false), que fica só no painel e nunca no repositório.
+services:
+  - type: web
+    name: prompt-engineering-support-assistant
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: openrouter
+      - key: WEB_RATE_LIMIT
+        value: "10"
+      - key: WEB_DAILY_MODEL_CALLS
+        value: "200"
+      - key: WEB_SEED_SAMPLES
+        value: "true"
+      - key: WEB_ALLOW_EVALUATION
+        value: "true"

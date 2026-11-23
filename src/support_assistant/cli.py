@@ -295,8 +295,8 @@ def _build_parser() -> argparse.ArgumentParser:
     st.add_argument("--json", action="store_true", help="imprime em JSON")
 
     web = sub.add_parser("web", help="abre a interface web local")
-    web.add_argument("--host", default="127.0.0.1", help="endereço (padrão: 127.0.0.1, só esta máquina)")
-    web.add_argument("--port", type=int, default=8000, help="porta (padrão: 8000)")
+    web.add_argument("--host", default=None, help="endereço (padrão: HOST do ambiente ou 127.0.0.1, só esta máquina)")
+    web.add_argument("--port", type=int, default=None, help="porta (padrão: PORT do ambiente ou 8000)")
     return parser
 
 
