@@ -11,6 +11,10 @@ Todas as execuções abaixo são reais: provedor OpenRouter, modelo `nvidia/nemo
 | [`runs/T003_resolution_steps_carla_vs_bruna_v2.json`](runs/T003_resolution_steps_carla_vs_bruna_v2.json) | O mesmo ticket e o mesmo prompt para dois perfis: Carla (intermediário, detalhado) e Bruna (avançado, didático) |
 | [`cache_hit_example.json`](cache_hit_example.json) | Uma execução original e a repetição equivalente servida pelo cache (`cache_hit: true`, `source_run_id`, zero tokens) |
 
+## Como refazer a comparação sem chave
+
+Use `history_comparison_joao-leigo-chat_T004.json` como `history.json` de uma pasta separada (`OUTPUT_DIR`). Os passos estão no [README principal](../README.md#reproduzir-a-comparação-v1--v2-sem-chave-de-api).
+
 ## Como gerar de novo
 
 ```bash
