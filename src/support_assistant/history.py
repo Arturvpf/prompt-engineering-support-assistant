@@ -23,6 +23,10 @@ class HistoryError(RuntimeError):
     """Histórico ilegível ou registro inexistente."""
 
 
+class RunNotFound(HistoryError):
+    """Não há execução com esse run_id no histórico."""
+
+
 class HistoryStore:
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -45,7 +49,7 @@ class HistoryStore:
         for record in self.load():
             if record.get("run_id") == run_id:
                 return record
-        raise HistoryError(f"Execução {run_id!r} não encontrada no histórico.")
+        raise RunNotFound(f"Execução {run_id!r} não encontrada no histórico.")
 
     def find_cached(self, cache_key: str) -> dict | None:
         """Execução original mais recente com a mesma chave (ignora registros que já vieram do cache)."""
@@ -70,7 +74,7 @@ class HistoryStore:
                 record.update(fields)
                 self._write(records)
                 return record
-        raise HistoryError(f"Execução {run_id!r} não encontrada no histórico.")
+        raise RunNotFound(f"Execução {run_id!r} não encontrada no histórico.")
 
     def _write(self, records: list[dict]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)

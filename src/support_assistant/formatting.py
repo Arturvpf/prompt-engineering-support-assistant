@@ -32,7 +32,8 @@ def render_record(record: dict, history_path) -> str:
 
     lines.append("-" * WIDTH)
     if record.get("cache_hit"):
-        lines.append(f"[cache] Resultado reaproveitado da execução {record['source_run_id']} (nenhuma chamada à API).")
+        lines.append(f"[cache] Do cache, sem chamada à API. Execução original: {record['source_run_id']} "
+                     f"(o run_id abaixo é o registro deste reaproveitamento).")
     else:
         m = record.get("metrics", {})
         tokens = (m.get("usage") or {}).get("total_tokens")
