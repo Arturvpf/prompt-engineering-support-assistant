@@ -6,238 +6,882 @@
 <title>Assistente de Suporte</title>
 <style>
   :root {
-    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2430; --muted: #5d6878; --border: #d9dee6;
-    --accent: #1f6feb; --accent-text: #ffffff; --ok: #1a7f37; --warn: #9a6700; --err: #cf222e;
-    --code-bg: #f0f2f5;
+    --bg: #F6F7F9; --panel: #FFFFFF; --sunken: #F1F3F6; --text: #14171F; --text-2: #3D4552; --muted: #5B6472;
+    --border: #E2E5EA; --border-strong: #CBD1DA;
+    --accent: #2F5BD3; --accent-strong: #1E3F99; --accent-soft: #EAF0FD; --on-accent: #FFFFFF;
+    --cache: #0B5D57; --cache-soft: #E6F4F1;
+    --inferred: #9A3412; --inferred-soft: #FFF1E6;
+    --warn: #854D0E; --warn-soft: #FFF4D6;
+    --high: #9F1239; --high-soft: #FDECEC;
+    --neutral: #334155; --neutral-soft: #EEF1F5;
+    --err: #B42318; --err-soft: #FEF3F2;
+    --code-bg: #0F172A; --code-text: #E2E8F0;
+    --bar-base: #94A3B8;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .05);
+    --font: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1419; --panel: #171d24; --text: #e3e8ef; --muted: #98a3b3; --border: #2c3540;
-      --accent: #4c8dff; --accent-text: #0b0f14; --ok: #3fb950; --warn: #d29922; --err: #f85149;
-      --code-bg: #10161d;
+    :root:not([data-theme="light"]) {
+      --bg: #0D1117; --panel: #151B23; --sunken: #1B232D; --text: #E6EBF2; --text-2: #C3CBD6; --muted: #98A3B3;
+      --border: #2A3340; --border-strong: #3A4554;
+      --accent: #6E9BFF; --accent-strong: #A9C3FF; --accent-soft: #1A2A4D; --on-accent: #0B1020;
+      --cache: #5EEAD4; --cache-soft: #0F2E2B;
+      --inferred: #FDBA74; --inferred-soft: #3A2414;
+      --warn: #FCD34D; --warn-soft: #3A2E0B;
+      --high: #FDA4AF; --high-soft: #3B1419;
+      --neutral: #CBD5E1; --neutral-soft: #222B36;
+      --err: #FDA29B; --err-soft: #3A1714;
+      --code-bg: #0A0F16; --code-text: #E2E8F0;
+      --bar-base: #64748B;
+      --shadow: none;
+      color-scheme: dark;
     }
   }
+  :root[data-theme="dark"] {
+    --bg: #0D1117; --panel: #151B23; --sunken: #1B232D; --text: #E6EBF2; --text-2: #C3CBD6; --muted: #98A3B3;
+    --border: #2A3340; --border-strong: #3A4554;
+    --accent: #6E9BFF; --accent-strong: #A9C3FF; --accent-soft: #1A2A4D; --on-accent: #0B1020;
+    --cache: #5EEAD4; --cache-soft: #0F2E2B;
+    --inferred: #FDBA74; --inferred-soft: #3A2414;
+    --warn: #FCD34D; --warn-soft: #3A2E0B;
+    --high: #FDA4AF; --high-soft: #3B1419;
+    --neutral: #CBD5E1; --neutral-soft: #222B36;
+    --err: #FDA29B; --err-soft: #3A1714;
+    --code-bg: #0A0F16; --code-text: #E2E8F0;
+    --bar-base: #64748B;
+    --shadow: none;
+    color-scheme: dark;
+  }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  header { padding: 20px 24px 8px; }
-  header h1 { margin: 0; font-size: 20px; }
-  header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
-  main { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px 24px 32px; }
-  main > * { min-width: 0; }
-  @media (max-width: 860px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
-  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-  label { display: block; font-weight: 600; font-size: 13px; margin: 14px 0 6px; }
-  label:first-child { margin-top: 0; }
-  select, textarea { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;
-                     background: var(--bg); color: var(--text); font: inherit; }
-  textarea { min-height: 90px; resize: vertical; }
-  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
-  .checks label { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 4px 0; }
-  button { margin-top: 16px; width: 100%; padding: 10px; border: 0; border-radius: 6px;
-           background: var(--accent); color: var(--accent-text); font: inherit; font-weight: 600; cursor: pointer; }
-  button:disabled { opacity: .6; cursor: wait; }
-  .tabs { display: flex; gap: 4px; margin-bottom: 12px; }
-  .tabs button { width: auto; margin: 0; padding: 6px 12px; background: transparent; color: var(--muted);
-                 border: 1px solid var(--border); }
-  .tabs button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-  .result { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
-  .result h3 { margin: 0; padding: 10px 12px; font-size: 14px; border-bottom: 1px solid var(--border);
-               display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-  .result h3 span { color: var(--muted); font-weight: 400; }
-  pre { margin: 0; padding: 12px; background: var(--code-bg); overflow-x: auto; white-space: pre-wrap;
-        font: 13px/1.45 ui-monospace, Consolas, monospace; }
-  pre.text { font: 14px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  pre.flow { white-space: pre; }
-  .meta { padding: 8px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
-  .meta .cache { color: var(--ok); font-weight: 600; }
-  .meta .warn { color: var(--warn); }
-  .error { color: var(--err); padding: 12px; }
-  details summary { cursor: pointer; padding: 8px 12px; font-size: 12px; color: var(--muted); }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  code, .mono { font-family: var(--mono); font-size: 12px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  h2 { margin: 0; font-size: 16px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+
+  /* ---------- topo ---------- */
+  .topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding: 12px 28px;
+            background: var(--panel); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand b { display: block; font-size: 15px; }
+  .nav { display: flex; gap: 4px; flex-wrap: wrap; }
+  .nav button { min-height: 40px; padding: 0 14px; border: 0; border-radius: 8px; background: none; color: var(--text-2); cursor: pointer; }
+  .nav button[aria-current="page"] { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
+  .env { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cache); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px;
+          border: 1px solid var(--border); background: var(--panel); color: var(--text-2); white-space: nowrap; }
+  .icon-btn { min-width: 36px; min-height: 36px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel);
+              cursor: pointer; display: inline-grid; place-items: center; color: var(--text-2); }
+
+  /* ---------- layout ---------- */
+  main { max-width: 1440px; margin: 0 auto; padding: 24px 28px 48px; }
+  .split { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .side { flex: 1 1 320px; max-width: 380px; }
+  .content { flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+  @media (max-width: 720px) {
+    main { padding: 16px; } .side { max-width: none; }
+    .topbar { padding: 12px 16px; position: static; } .env { margin-left: 0; }
+  }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+  .pad { padding: 20px; }
+  .stack { display: flex; flex-direction: column; gap: 8px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+
+  /* ---------- formulário ---------- */
+  form.panel { display: flex; flex-direction: column; gap: 20px; }
+  label.field { font-weight: 600; }
+  select, textarea, input[type="text"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border-strong);
+                                          border-radius: 8px; background: var(--panel); }
+  select { min-height: 44px; }
+  textarea { resize: vertical; min-height: 84px; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { padding: 2px 10px; border-radius: 999px; background: var(--sunken); font-size: 12px; color: var(--text-2); }
+  blockquote { margin: 0; padding: 10px 12px; background: var(--sunken); border-radius: 8px; color: var(--text-2); font-size: 13px; }
+  .link-btn { align-self: flex-start; min-height: 32px; padding: 0; border: 0; background: none; color: var(--accent); font-weight: 600; cursor: pointer; }
+  fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; min-height: 44px; border-radius: 8px;
+            border: 1px solid var(--border); background: var(--panel); cursor: pointer; }
+  .option:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .option input { margin: 3px 0 0; accent-color: var(--accent); }
+  .option small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+                  color: var(--muted); font-size: 12px; }
+  .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; cursor: pointer; }
+  .switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+  .primary { min-height: 48px; padding: 0 20px; border: 0; border-radius: 10px; background: var(--accent); color: var(--on-accent);
+             font-weight: 600; font-size: 15px; cursor: pointer; }
+  .primary:disabled { opacity: .6; cursor: progress; }
+  .secondary { min-height: 44px; padding: 0 18px; border: 1px solid var(--accent); border-radius: 10px; background: var(--panel);
+               color: var(--accent-strong); font-weight: 600; cursor: pointer; }
+  .secondary:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ---------- resultados ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .tile { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .tile b { display: block; font-size: 22px; letter-spacing: -.01em; }
+  .tile span { font-size: 12px; color: var(--muted); }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+  .tabs button { min-height: 44px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; background: none;
+                 color: var(--text-2); cursor: pointer; margin-bottom: -1px; }
+  .tabs button[aria-selected="true"] { color: var(--accent-strong); font-weight: 600; border-bottom-color: var(--accent); }
+  .versions { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+  @media (max-width: 720px) { .versions { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; min-width: 0; }
+  .card.is-default { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .card > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+                   padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .card .body { padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .card > footer { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 12px 16px;
+                   border-top: 1px solid var(--border); font-size: 12px; color: var(--text-2); }
+  .vbadge { padding: 2px 10px; border-radius: 6px; background: var(--neutral-soft); color: var(--neutral); font-weight: 700; font-size: 13px; }
+  .vbadge.default { background: var(--accent); color: var(--on-accent); }
+  .pill { padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .pill.alta { background: var(--high-soft); color: var(--high); }
+  .pill.média { background: var(--warn-soft); color: var(--warn); }
+  .pill.baixa { background: var(--neutral-soft); color: var(--neutral); }
+  .pill.inferida { background: var(--inferred-soft); color: var(--inferred); }
+  .status { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+  .status.cache { background: var(--cache-soft); color: var(--cache); }
+  .status.fresh { background: var(--accent-soft); color: var(--accent-strong); }
+  .hyp { display: flex; gap: 10px; align-items: baseline; padding: 7px 0; border-bottom: 1px dashed var(--border); }
+  .hyp .mono { color: var(--muted); }
+  .hyp > span:nth-child(2) { flex: 1; }
+  ul.plain, ol.plain { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .q { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; }
+  .num { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft);
+         color: var(--accent-strong); font-weight: 700; font-size: 13px; }
+  .box { padding: 12px; border-radius: 8px; background: var(--sunken); }
+  .box.warn { background: var(--warn-soft); color: var(--warn); }
+  pre.flow { margin: 0; padding: 14px; overflow-x: auto; background: var(--code-bg); color: var(--code-text);
+             font: 12.5px/1.5 var(--mono); border-radius: 8px; }
+  pre.raw { margin: 0; padding: 12px; overflow: auto; max-height: 360px; background: var(--sunken); border-radius: 8px;
+            font: 12px/1.45 var(--mono); white-space: pre-wrap; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; min-height: 28px; }
+  .warnings { display: flex; flex-direction: column; gap: 4px; padding: 10px 16px; border-top: 1px solid var(--border); }
+  .warnings div { font-size: 12px; color: var(--warn); }
+  .note { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: var(--panel);
+          border: 1px solid var(--border); font-size: 13px; color: var(--text-2); }
+  .empty { padding: 48px 16px; text-align: center; color: var(--muted); }
+  .error { padding: 12px 14px; border-radius: 8px; background: var(--err-soft); color: var(--err); }
+  .skeleton { height: 220px; border-radius: 12px; background: linear-gradient(90deg, var(--sunken), var(--panel), var(--sunken));
+              background-size: 200% 100%; animation: shimmer 1.4s infinite linear; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+
+  /* ---------- avaliar ---------- */
+  .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 12px; }
-  .stat { border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
-  .stat b { display: block; font-size: 20px; }
-  .stat small { color: var(--muted); }
-  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 10px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 8px; border-bottom: 1px solid var(--sunken); vertical-align: middle; }
+  tr.selected td { background: var(--accent-soft); }
+  .table-btn { min-height: 32px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--panel); cursor: pointer; }
+  .scores { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .scores button { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--panel);
+                   font-weight: 600; cursor: pointer; }
+  .scores button[aria-checked="true"] { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+  .criterion { display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .delta { margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .delta.up { background: var(--accent-soft); color: var(--accent-strong); }
+  .delta.down { background: var(--inferred-soft); color: var(--inferred); }
+  .delta.same { background: var(--sunken); color: var(--text-2); }
+
+  /* ---------- métricas ---------- */
+  .bars { display: flex; flex-direction: column; gap: 14px; }
+  .bar-row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; }
+  @media (max-width: 560px) { .bar-row { grid-template-columns: minmax(0, 1fr); } }
+  .bar-line { display: grid; grid-template-columns: 28px minmax(0, 1fr) 64px; gap: 8px; align-items: center; font-size: 12px; }
+  .bar-track { height: 10px; }
+  .bar { height: 10px; border-radius: 999px; background: var(--bar-base); }
+  .bar.default { background: var(--accent); }
+  .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .filters label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .filters select { min-height: 36px; width: auto; padding: 0 10px; }
+
+  .toast { position: fixed; right: 20px; bottom: 20px; max-width: min(420px, calc(100vw - 40px)); padding: 12px 16px;
+           border-radius: 10px; background: var(--text); color: var(--bg); box-shadow: 0 8px 24px rgba(0,0,0,.18); font-size: 13px; }
+
+  /* Fontes mono com ligaduras transformam "-->" e "+---" em setas e quebram o desenho ASCII.
+     Fica no fim porque o atalho "font:" das regras acima redefine font-variant. */
+  code, .mono, pre, pre.flow, pre.raw { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Assistente de Suporte</h1>
-  <p id="model">carregando...</p>
+
+<header class="topbar">
+  <div class="brand">
+    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="7" fill="#2F5BD3"></rect><path d="M8 10h12M8 14h8M8 18h10" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"></path></svg>
+    <div><b>Assistente de Suporte</b><span class="small muted" id="brand-sub">engenharia de prompt</span></div>
+  </div>
+  <nav class="nav" aria-label="Seções">
+    <button type="button" data-view="generate" aria-current="page">Gerar</button>
+    <button type="button" data-view="evaluate">Avaliar e comparar</button>
+    <button type="button" data-view="history">Histórico e métricas</button>
+  </nav>
+  <div class="env">
+    <span class="dot" aria-hidden="true"></span>
+    <span id="env-model">carregando…</span>
+    <span class="chip" id="env-params" hidden></span>
+    <button type="button" class="icon-btn" id="theme" aria-label="Alternar tema claro e escuro" title="Tema">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5a6.5 6.5 0 1 0 0 13z" fill="currentColor"></path><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3" fill="none"></circle></svg>
+    </button>
+  </div>
 </header>
+
 <main>
-  <form class="panel" id="form">
-    <label for="customer">Perfil do cliente</label>
-    <select id="customer" required></select>
+  <!-- =============================== GERAR =============================== -->
+  <section id="view-generate" class="split" aria-label="Gerar">
+    <form class="panel pad side" id="form" novalidate>
+      <div class="eyebrow">Cenário</div>
 
-    <label for="ticket">Ticket</label>
-    <select id="ticket"></select>
-    <textarea id="ticket_text" placeholder="Ou descreva um problema novo aqui (substitui o ticket escolhido)" maxlength="4000"></textarea>
-    <div class="hint" id="ticket_desc"></div>
+      <div class="stack">
+        <label class="field" for="customer">Cliente</label>
+        <select id="customer"></select>
+        <div class="tags" id="customer-tags"></div>
+      </div>
 
-    <label>Tipos de conteúdo</label>
-    <div class="checks" id="types"></div>
+      <div class="stack">
+        <label class="field" for="ticket">Ticket</label>
+        <select id="ticket"></select>
+        <blockquote id="ticket-desc"></blockquote>
+        <button type="button" class="link-btn" id="toggle-text" aria-expanded="false" aria-controls="ticket-text-wrap">+ Escrever um ticket novo</button>
+        <div id="ticket-text-wrap" class="stack" hidden>
+          <label for="ticket_text" class="small muted">Descreva o problema. Substitui o ticket escolhido.</label>
+          <textarea id="ticket_text" maxlength="4000" placeholder="Ex.: A API retorna 500 ao criar pedido desde ontem"></textarea>
+          <span class="small muted" id="ticket-count">0 / 4000</span>
+        </div>
+      </div>
 
-    <label>Versões do prompt</label>
-    <div class="checks" id="versions"></div>
-    <div class="hint">Marque mais de uma para comparar no mesmo cenário.</div>
+      <fieldset>
+        <legend>Conteúdo</legend>
+        <div class="grid2" id="types"></div>
+      </fieldset>
 
-    <div class="checks"><label><input type="checkbox" id="use_cache" checked> Usar cache</label></div>
+      <fieldset>
+        <legend>Versões do prompt</legend>
+        <div class="stack" id="versions"></div>
+        <span class="small muted">Marque duas ou mais para comparar lado a lado.</span>
+      </fieldset>
 
-    <button type="submit" id="submit">Gerar</button>
-  </form>
+      <label class="switch">
+        <span><b>Usar cache</b><br><span class="small muted">Reaproveita execuções equivalentes</span></span>
+        <input type="checkbox" id="use_cache" checked>
+      </label>
 
-  <section class="panel">
-    <div class="tabs">
-      <button type="button" data-tab="results" class="active">Resultado</button>
-      <button type="button" data-tab="history">Histórico</button>
-      <button type="button" data-tab="stats">Métricas</button>
+      <button type="submit" class="primary" id="submit">Gerar</button>
+      <span class="small muted" id="history-path"></span>
+    </form>
+
+    <div class="content" id="results" aria-live="polite">
+      <div class="panel empty">
+        <b>Escolha o cliente, o ticket e o que gerar.</b><br>
+        Os resultados das versões aparecem lado a lado, por tipo de conteúdo.
+      </div>
     </div>
-    <div id="tab-results"><p class="empty">Escolha o perfil, o ticket e clique em Gerar.</p></div>
-    <div id="tab-history" hidden></div>
-    <div id="tab-stats" hidden></div>
+  </section>
+
+  <!-- ========================= AVALIAR E COMPARAR ========================= -->
+  <section id="view-evaluate" class="stack" style="gap: 24px" aria-label="Avaliar e comparar" hidden>
+    <div class="panel pad stack" style="gap: 16px">
+      <div class="row" style="justify-content: space-between">
+        <h2>Execuções do cenário</h2>
+        <label class="row small" for="scenario">Cenário
+          <select id="scenario" style="width: auto; min-width: 280px"></select>
+        </label>
+      </div>
+      <p class="small muted" style="margin: 0">Avalie cada execução com a rubrica. Para comparar, marque execuções avaliadas do mesmo cenário (registros do cache não entram: avalie a execução original).</p>
+      <div class="table-wrap" id="scenario-runs"></div>
+    </div>
+
+    <div class="split" id="eval-area" hidden>
+      <article class="card" id="eval-output" style="flex: 1 1 520px"></article>
+      <form class="panel pad stack" id="rubric" style="flex: 1 1 420px; gap: 18px" novalidate></form>
+    </div>
+
+    <section class="panel pad stack" style="gap: 16px" aria-label="Comparação">
+      <div class="row" style="justify-content: space-between">
+        <h2>Comparação</h2>
+        <span class="small muted" id="compare-count">Nenhuma execução marcada.</span>
+      </div>
+      <label class="field" for="verdict">Por que a vencedora é melhor</label>
+      <textarea id="verdict" maxlength="4000" placeholder="Explique a diferença com base nas notas e nas saídas."></textarea>
+      <div class="row">
+        <span class="small muted">Só aceita execuções avaliadas, sem cache, com o mesmo cliente, ticket, modelo e parâmetros.</span>
+        <button type="button" class="secondary" id="compare-btn" style="margin-left: auto" disabled>Comparar e salvar</button>
+      </div>
+      <div id="compare-result"></div>
+    </section>
+  </section>
+
+  <!-- ======================== HISTÓRICO E MÉTRICAS ======================== -->
+  <section id="view-history" class="stack" style="gap: 20px" aria-label="Histórico e métricas" hidden>
+    <div class="tiles" id="stats-tiles"></div>
+    <section class="panel pad stack" style="gap: 16px" aria-label="Custo por versão">
+      <h2>Tokens médios por tipo e versão</h2>
+      <div class="bars" id="bars"></div>
+    </section>
+    <section class="panel" aria-label="Execuções">
+      <div class="row pad" style="justify-content: space-between; border-bottom: 1px solid var(--border)">
+        <h2>Execuções</h2>
+        <div class="filters">
+          <label>Cliente <select id="f-customer"><option value="">Todos</option></select></label>
+          <label>Versão <select id="f-version"><option value="">Todas</option></select></label>
+          <label><input type="checkbox" id="f-evaluated"> Só avaliadas</label>
+        </div>
+      </div>
+      <div class="table-wrap" id="history-table"></div>
+    </section>
   </section>
 </main>
 
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
 <script>
+"use strict";
 const $ = (id) => document.getElementById(id);
-const el = (tag, props = {}, children = []) => {
-  const node = Object.assign(document.createElement(tag), props);
-  for (const c of [].concat(children)) node.append(c);
+
+/** Cria elementos só com textContent e atributos: nada vindo do modelo vira HTML. */
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k === "text") node.textContent = v;
+    else if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else if (k in node && !k.includes("-")) node[k] = v;
+    else node.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of [].concat(children)) if (c !== null && c !== undefined && c !== false) node.append(c);
   return node;
-};
-let options = null;
+}
+const fmt = (n) => (n === null || n === undefined ? "—" : Number(n).toLocaleString("pt-BR"));
+const secs = (ms) => `${(ms / 1000).toLocaleString("pt-BR", {minimumFractionDigits: 1, maximumFractionDigits: 1})} s`;
+const when = (iso) => (iso || "").slice(0, 16).replace("T", " ");
+
+const state = { options: null, results: [], activeType: null, scenarioRuns: [], selected: new Set(), evalRun: null, history: [] };
 
 async function api(path, body) {
-  const res = await fetch(path, body ? {
-    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body),
-  } : {});
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || res.statusText);
+  const res = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)} : {});
+  let data = {};
+  try { data = await res.json(); } catch (_) { /* resposta sem JSON */ }
+  if (!res.ok) throw new Error(data.error || `${res.status} ${res.statusText}`);
   return data;
 }
 
-function check(name, value, text, checked) {
-  return el("label", {}, [el("input", {type: "checkbox", name, value, checked}), text]);
+let toastTimer;
+function toast(message) {
+  const t = $("toast");
+  t.textContent = message;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 4000);
 }
+
+// ------------------------------------------------------------------ tema
+function applyTheme(theme) {
+  if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
+}
+try { applyTheme(localStorage.getItem("theme")); } catch (_) { /* sem storage */ }
+$("theme").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = dark ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem("theme", next); } catch (_) { /* sem storage */ }
+});
+
+// ------------------------------------------------------------------ navegação
+function showView(name) {
+  for (const b of document.querySelectorAll(".nav button")) {
+    if (b.dataset.view === name) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  }
+  for (const v of ["generate", "evaluate", "history"]) $(`view-${v}`).hidden = v !== name;
+  if (name === "evaluate") loadScenarios();
+  if (name === "history") loadHistoryView();
+}
+for (const b of document.querySelectorAll(".nav button")) b.addEventListener("click", () => showView(b.dataset.view));
+
+// ------------------------------------------------------------------ dados de apoio
+const typeLabel = (id) => (state.options.content_types.find((c) => c.id === id) || {}).label || id;
+const shortType = (id) => ({diagnosis: "Diagnóstico", resolution_steps: "Passo a passo", clarifying_questions: "Perguntas", flow_summary: "Fluxograma"})[id] || id;
+const customerName = (id) => (state.options.customers.find((c) => c.id === id) || {}).name || id;
+const isDefault = (v) => v === state.options.default_version;
+const vbadge = (v) => el("span", {class: `vbadge${isDefault(v) ? " default" : ""}`, text: v});
 
 async function init() {
-  options = await api("/api/options");
-  $("model").textContent = `Modelo: ${options.model}  |  histórico salvo em ${options.history_path}`;
-  for (const c of options.customers)
-    $("customer").append(el("option", {value: c.id, textContent:
-      `${c.name}: ${c.technical_level}, ${c.communication_style}, ${c.channel}`}));
-  for (const t of options.tickets)
-    $("ticket").append(el("option", {value: t.id, textContent: `${t.id}: ${t.title}`}));
-  for (const ct of options.content_types) $("types").append(check("type", ct.id, ct.label, true));
-  options.versions.forEach((v, i) =>
-    $("versions").append(check("version", v.id, `${v.id}: ${v.description.slice(0, 60)}...`, i === options.versions.length - 1)));
-  const showDesc = () => {
-    const t = options.tickets.find((x) => x.id === $("ticket").value);
-    $("ticket_desc").textContent = t ? `"${t.description}"` : "";
-  };
-  $("ticket").addEventListener("change", showDesc);
-  showDesc();
+  const o = state.options = await api("/api/options");
+  const p = o.generation_params || {};
+  $("env-model").textContent = o.model.replace("/", " · ");
+  $("env-params").textContent = `temp ${p.temperature} · seed ${p.seed}`;
+  $("env-params").hidden = false;
+  $("brand-sub").textContent = `engenharia de prompt · ${o.versions.length} versões`;
+  $("history-path").replaceChildren("Histórico salvo em ", el("code", {text: o.history_path}));
+
+  for (const c of o.customers) $("customer").append(el("option", {value: c.id, text: c.name}));
+  for (const t of o.tickets) $("ticket").append(el("option", {value: t.id, text: `${t.id} · ${t.title}`}));
+  for (const ct of o.content_types)
+    $("types").append(el("label", {class: "option"}, [el("input", {type: "checkbox", name: "type", value: ct.id, checked: true}), shortType(ct.id)]));
+  for (const v of o.versions) {
+    const badge = isDefault(v.id) ? el("span", {class: "pill", style: "margin-left: 6px; background: var(--accent-soft); color: var(--accent-strong)", text: "padrão"}) : null;
+    $("versions").append(el("label", {class: "option", title: v.description}, [
+      el("input", {type: "checkbox", name: "version", value: v.id, checked: isDefault(v.id)}),
+      el("span", {}, [el("b", {text: v.id}), badge, el("small", {text: v.description})]),
+    ]));
+  }
+  for (const c of o.customers) $("f-customer").append(el("option", {value: c.id, text: c.name}));
+  for (const v of o.versions) $("f-version").append(el("option", {value: v.id, text: v.id}));
+
+  $("customer").addEventListener("change", showCustomer);
+  $("ticket").addEventListener("change", showTicket);
+  $("ticket_text").addEventListener("input", () => { $("ticket-count").textContent = `${$("ticket_text").value.length} / 4000`; showTicket(); });
+  $("form").addEventListener("change", updateSubmit);
+  $("toggle-text").addEventListener("click", () => {
+    const open = $("ticket-text-wrap").hidden;
+    $("ticket-text-wrap").hidden = !open;
+    $("toggle-text").setAttribute("aria-expanded", String(open));
+    $("toggle-text").textContent = open ? "− Usar um ticket de exemplo" : "+ Escrever um ticket novo";
+    if (!open) $("ticket_text").value = "";
+    showTicket();
+    if (open) $("ticket_text").focus();
+  });
+  showCustomer(); showTicket(); updateSubmit();
 }
 
-function checked(name) {
-  return [...document.querySelectorAll(`input[name=${name}]:checked`)].map((i) => i.value);
+function showCustomer() {
+  const c = state.options.customers.find((x) => x.id === $("customer").value);
+  $("customer-tags").replaceChildren(...[c.technical_level, c.communication_style, c.channel].map((t) => el("span", {class: "tag", text: t})));
+}
+function showTicket() {
+  const free = !$("ticket-text-wrap").hidden && $("ticket_text").value.trim();
+  const t = state.options.tickets.find((x) => x.id === $("ticket").value);
+  $("ticket").disabled = Boolean(free);
+  $("ticket-desc").textContent = free ? "Usando o ticket escrito abaixo." : (t ? `“${t.description}”` : "");
+}
+const checkedValues = (name) => [...document.querySelectorAll(`input[name=${name}]:checked`)].map((i) => i.value);
+function updateSubmit() {
+  const n = checkedValues("type").length * checkedValues("version").length;
+  $("submit").disabled = n === 0;
+  $("submit").textContent = n === 0 ? "Escolha o conteúdo e a versão" : `Gerar ${n} ${n === 1 ? "conteúdo" : "conteúdos"}`;
 }
 
+// ------------------------------------------------------------------ gerar
 $("form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const out = $("tab-results");
-  showTab("results");
+  const types = checkedValues("type"), versions = checkedValues("version");
+  if (!types.length || !versions.length) return;
+  const out = $("results");
   $("submit").disabled = true;
-  $("submit").textContent = "Gerando...";
-  out.replaceChildren(el("p", {className: "empty", textContent: "Gerando, pode levar alguns segundos por tipo..."}));
+  $("submit").textContent = "Gerando…";
+  out.replaceChildren(
+    el("p", {class: "small muted", text: "Gerando. Cada tipo leva alguns segundos quando não está no cache; na v3 o diagnóstico vem primeiro."}),
+    el("div", {class: "versions"}, versions.map(() => el("div", {class: "skeleton", "aria-hidden": "true"}))),
+  );
   try {
+    const text = $("ticket-text-wrap").hidden ? "" : $("ticket_text").value;
     const data = await api("/api/generate", {
-      customer_id: $("customer").value,
-      ticket_id: $("ticket").value,
-      ticket_text: $("ticket_text").value,
-      content_types: checked("type"),
-      versions: checked("version"),
-      use_cache: $("use_cache").checked,
+      customer_id: $("customer").value, ticket_id: $("ticket").value, ticket_text: text,
+      content_types: types, versions, use_cache: $("use_cache").checked,
     });
-    out.replaceChildren(...data.results.map(renderResult));
+    state.results = data.results;
+    state.activeType = types.find((t) => data.results.some((r) => r.content_type === t)) || types[0];
+    renderResults();
   } catch (err) {
-    out.replaceChildren(el("p", {className: "error", textContent: `Erro: ${err.message}`}));
+    out.replaceChildren(el("div", {class: "error", role: "alert", text: `Não foi possível gerar: ${err.message}`}));
   } finally {
-    $("submit").disabled = false;
-    $("submit").textContent = "Gerar";
+    updateSubmit();
   }
 });
 
-function renderResult(r) {
-  const label = (options.content_types.find((c) => c.id === r.content_type) || {}).label || r.content_type;
-  const title = el("h3", {}, [label, el("span", {textContent: `prompt ${r.prompt_version}`})]);
-  if (r.error) return el("div", {className: "result"}, [title, el("p", {className: "error", textContent: r.error})]);
-
-  const m = r.metrics || {};
-  const meta = el("div", {className: "meta"});
-  if (r.cache_hit) meta.append(el("span", {className: "cache", textContent: `cache: reaproveitado de ${r.source_run_id}`}));
-  else meta.append(`${(m.latency_ms / 1000).toFixed(1)}s | tokens: ${(m.usage || {}).total_tokens ?? "?"} | tentativas: ${m.attempts}`);
-  meta.append(` | run_id ${r.run_id}`);
-  for (const w of r.warnings || []) meta.append(el("div", {className: "warn", textContent: `aviso: ${w}`}));
-
-  const pre = el("pre", {className: r.content_type === "flow_summary" ? "flow" : "text", textContent: r.rendered});
-  const raw = el("details", {}, [el("summary", {textContent: "JSON do registro"}),
-    el("pre", {textContent: JSON.stringify(r, (k, v) => (k === "rendered" ? undefined : v), 2)})]);
-  return el("div", {className: "result"}, [title, pre, meta, raw]);
+function renderResults() {
+  const rs = state.results;
+  const fresh = rs.filter((r) => !r.error && !r.cache_hit);
+  const cached = rs.filter((r) => r.cache_hit);
+  const failed = rs.filter((r) => r.error);
+  const tokens = fresh.reduce((s, r) => s + (((r.metrics || {}).usage || {}).total_tokens || 0), 0);
+  const tiles = el("div", {class: "tiles"}, [
+    tile(rs.length, "conteúdos gerados"),
+    tile(fresh.length, "chamadas ao modelo"),
+    tile(cached.length, `do cache (${rs.length ? Math.round(cached.length / rs.length * 100) : 0}%)`),
+    tile(fmt(tokens), "tokens gastos agora"),
+  ]);
+  const types = [...new Set(rs.map((r) => r.content_type))];
+  const tabs = el("div", {class: "tabs", role: "tablist", "aria-label": "Tipo de conteúdo"}, types.map((t) => el("button", {
+    type: "button", role: "tab", "aria-selected": String(t === state.activeType), text: shortType(t),
+    onclick: () => { state.activeType = t; renderResults(); },
+  })));
+  const cards = rs.filter((r) => r.content_type === state.activeType).map(resultCard);
+  const nodes = [tiles, tabs, el("div", {class: "versions", role: "tabpanel"}, cards)];
+  const upstream = rs.find((r) => r.content_type === state.activeType && r.upstream && r.upstream.diagnosis);
+  if (upstream) nodes.push(el("div", {class: "note"}, [infoIcon(), el("span", {}, [
+    `Na ${upstream.prompt_version}, este conteúdo recebeu o diagnóstico `, el("code", {text: upstream.upstream.diagnosis}), " como contexto (prompts encadeados).",
+  ])]));
+  if (failed.length) nodes.push(el("div", {class: "error", text: `${failed.length} conteúdo(s) falharam. Veja o card de cada um.`}));
+  $("results").replaceChildren(...nodes);
 }
 
-async function loadHistory() {
-  const box = $("tab-history");
-  box.replaceChildren(el("p", {className: "empty", textContent: "Carregando..."}));
+const tile = (value, label) => el("div", {class: "tile"}, [el("b", {text: String(value)}), el("span", {text: label})]);
+const infoIcon = () => {
+  const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  s.setAttribute("width", "18"); s.setAttribute("height", "18"); s.setAttribute("viewBox", "0 0 18 18"); s.setAttribute("aria-hidden", "true");
+  s.style.flex = "none";
+  s.innerHTML = '<circle cx="9" cy="9" r="7.5" stroke="currentColor" stroke-width="1.5" fill="none"></circle><path d="M9 8v4.5M9 5.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>';
+  return s;
+};
+
+function resultCard(r) {
+  const head = el("header", {}, [
+    el("div", {class: "row"}, [vbadge(r.prompt_version), el("b", {text: typeLabel(r.content_type)}),
+      isDefault(r.prompt_version) ? el("span", {class: "chip", text: "padrão"}) : null]),
+    r.evaluation ? el("span", {class: "small muted", text: `nota ${r.evaluation.total}/15`}) : null,
+  ]);
+  if (r.error) return el("article", {class: "card"}, [head, el("div", {class: "body"}, el("div", {class: "error", text: r.error}))]);
+  const card = el("article", {class: `card${isDefault(r.prompt_version) ? " is-default" : ""}`}, [head, el("div", {class: "body"}, renderOutput(r))]);
+  if ((r.warnings || []).length) card.append(el("div", {class: "warnings"}, r.warnings.map((w) => el("div", {text: `Aviso: ${w}`}))));
+  card.append(provenance(r));
+  return card;
+}
+
+/** Diz de onde veio o resultado, sem ambiguidade entre o registro novo e a execução original. */
+function provenance(r) {
+  const m = r.metrics || {};
+  const target = r.cache_hit ? r.source_run_id : r.run_id;
+  const parts = r.cache_hit
+    ? [el("span", {class: "status cache", text: "Do cache · sem chamada à API"}),
+       el("span", {}, ["original ", el("code", {text: r.source_run_id})]),
+       el("span", {}, ["este registro ", el("code", {text: r.run_id})])]
+    : [el("span", {class: "status fresh", text: "Gerado agora"}),
+       el("span", {text: `${secs(m.latency_ms || 0)} · ${fmt((m.usage || {}).total_tokens)} tokens · ${m.attempts} ${m.attempts === 1 ? "tentativa" : "tentativas"}`}),
+       el("span", {}, ["registro ", el("code", {text: r.run_id})])];
+  const raw = el("details", {style: "flex-basis: 100%"}, [el("summary", {text: "JSON do registro"}),
+    el("pre", {class: "raw", text: JSON.stringify(r, (k, v) => (k === "rendered" ? undefined : v), 2)})]);
+  return el("footer", {}, [...parts, el("button", {type: "button", class: "link-btn", style: "margin-left: auto", text: "Avaliar",
+    onclick: () => openEvaluation(target)}), raw]);
+}
+
+// ------------------------------------------------------------------ renderização por tipo
+function renderOutput(r) {
+  const o = r.output || {};
+  const render = {diagnosis: renderDiagnosis, resolution_steps: renderSteps, clarifying_questions: renderQuestions, flow_summary: renderFlow}[r.content_type];
+  try { return render(o); } catch (_) { return [el("pre", {class: "raw", text: r.rendered || JSON.stringify(o, null, 2)})]; }
+}
+const section = (title, children) => el("div", {class: "stack"}, [el("div", {class: "eyebrow", text: title}), ...[].concat(children)]);
+
+function renderDiagnosis(o) {
+  const hyps = (o.hypotheses || []).map((h) => el("div", {class: "hyp"}, [
+    el("span", {class: "mono", text: h.id}),
+    el("span", {}, [h.description, " ", h.basis === "inferida" ? el("span", {class: "pill inferida", text: "inferida"}) : null]),
+    h.likelihood ? el("span", {class: `pill ${h.likelihood}`, text: h.likelihood}) : null,
+  ]));
+  const ev = (o.evidence || []).map((e) => el("li", {}, [
+    el("div", {text: e.signal}),
+    el("div", {class: "small muted", text: [
+      (e.supports || []).length ? `apoia ${e.supports.join(", ")}` : "", (e.weakens || []).length ? `enfraquece ${e.weakens.join(", ")}` : "",
+    ].filter(Boolean).join(" · ")}),
+  ]));
+  const missing = (o.missing_information || []).map((m) => el("li", {}, [el("div", {text: m.item}), m.why_it_matters ? el("div", {class: "small muted", text: m.why_it_matters}) : null]));
+  const c = o.probable_conclusion || {};
+  return [
+    section("Hipóteses", hyps),
+    section("Evidências do relato", el("ul", {class: "plain"}, ev)),
+    section("Informações faltantes", el("ul", {class: "plain"}, missing)),
+    el("div", {class: "box stack", style: "gap: 4px"}, [
+      el("div", {class: "small muted", text: `Conclusão provável · ${c.hypothesis_id || "—"} · confiança ${c.confidence || "—"}`}),
+      el("b", {text: c.summary || ""}),
+      c.how_to_confirm ? el("div", {class: "small", text: `Como confirmar: ${c.how_to_confirm}`}) : null,
+    ]),
+  ];
+}
+
+function renderSteps(o) {
+  const steps = (o.steps || []).map((s, i) => el("li", {class: "q"}, [
+    el("span", {class: "num", text: String(s.number || i + 1)}),
+    el("div", {class: "stack", style: "gap: 2px"}, [
+      el("b", {text: s.action}),
+      s.why ? el("div", {class: "small muted", text: `Por quê: ${s.why}`}) : null,
+      s.expected_result ? el("div", {class: "small", text: `Resultado esperado: ${s.expected_result}`}) : null,
+    ]),
+  ]));
+  return [
+    o.opening ? el("div", {text: o.opening}) : null,
+    el("ol", {class: "plain"}, steps),
+    o.if_not_resolved ? el("div", {class: "box stack", style: "gap: 2px"}, [el("div", {class: "small muted", text: "Se não resolver"}), el("div", {text: o.if_not_resolved})]) : null,
+  ].filter(Boolean);
+}
+
+function renderQuestions(o) {
+  const qs = [...(o.questions || [])].sort((a, b) => (a.priority || 0) - (b.priority || 0)).map((q, i) => el("li", {class: "q"}, [
+    el("span", {class: "num", text: String(q.priority || i + 1)}),
+    el("div", {class: "stack", style: "gap: 2px"}, [
+      el("b", {text: q.question}),
+      q.reason ? el("div", {class: "small muted", text: `Por quê: ${q.reason}`}) : null,
+      q.how_to_find ? el("div", {class: "small", text: `Onde encontrar: ${q.how_to_find}`}) : null,
+    ]),
+  ]));
+  return [el("ol", {class: "plain"}, qs)];
+}
+
+function renderFlow(o) {
+  const decisions = (o.decision_points || []).map((d) => el("li", {}, [
+    el("b", {text: d.question}),
+    el("div", {class: "small"}, [el("span", {class: "muted", text: "sim → "}), d.if_yes]),
+    el("div", {class: "small"}, [el("span", {class: "muted", text: "não → "}), d.if_no]),
+  ]));
+  const esc = o.escalation || {};
+  const attach = Array.isArray(esc.attach) ? esc.attach.join(", ") : esc.attach;
+  return [
+    el("pre", {class: "flow", tabindex: "0", "aria-label": "Fluxograma em texto", text: o.ascii_flowchart || ""}),
+    o.flow ? el("div", {class: "small muted", text: "Desenhado pelo código a partir do grafo devolvido pelo modelo."}) : null,
+    decisions.length ? section("Pontos de decisão", el("ul", {class: "plain"}, decisions)) : null,
+    esc.when ? el("div", {class: "box stack", style: "gap: 2px"}, [el("div", {class: "small muted", text: "Escalar para N2"}), el("div", {text: esc.when}),
+      attach ? el("div", {class: "small", text: `Anexar: ${attach}`}) : null]) : null,
+  ].filter(Boolean);
+}
+
+// ------------------------------------------------------------------ avaliar e comparar
+async function loadScenarios(focusRunId) {
   try {
     const {runs} = await api("/api/history");
-    if (!runs.length) return box.replaceChildren(el("p", {className: "empty", textContent: "Nenhuma execução ainda."}));
-    const head = el("tr", {}, ["run_id", "data", "cliente", "ticket", "tipo", "versão", "origem", "nota"].map((h) => el("th", {textContent: h})));
-    const rows = runs.map((r) => el("tr", {}, [r.run_id, r.timestamp.slice(0, 19).replace("T", " "), r.customer_id,
-      r.ticket_id, r.content_type, r.prompt_version, r.cache_hit ? `cache de ${r.source_run_id}` : "modelo",
-      r.score == null ? "-" : `${r.score}/15`].map((v) => el("td", {textContent: v}))));
-    box.replaceChildren(el("table", {}, [head, ...rows]));
+    const originals = runs.filter((r) => !r.cache_hit);
+    const groups = new Map();
+    for (const r of originals) {
+      if (!groups.has(r.scenario)) groups.set(r.scenario, []);
+      groups.get(r.scenario).push(r);
+    }
+    const sel = $("scenario");
+    const previous = focusRunId ? (originals.find((r) => r.run_id === focusRunId) || {}).scenario : sel.value;
+    sel.replaceChildren(...[...groups.entries()].map(([key, rs]) => el("option", {
+      value: key, text: `${customerName(rs[0].customer_id)} · ${rs[0].ticket_id === "ADHOC" ? "ticket livre" : rs[0].ticket_id} · ${rs.length} execuções`,
+    })));
+    if (!groups.size) {
+      $("scenario-runs").replaceChildren(el("p", {class: "empty", text: "Nenhuma execução ainda. Gere conteúdos na aba Gerar."}));
+      return;
+    }
+    if (previous && groups.has(previous)) sel.value = previous;
+    state.scenarioRuns = groups.get(sel.value) || [];
+    renderScenarioRuns();
+    if (focusRunId) await openRun(focusRunId);
   } catch (err) {
-    box.replaceChildren(el("p", {className: "error", textContent: `Erro: ${err.message}`}));
+    $("scenario-runs").replaceChildren(el("div", {class: "error", text: `Erro ao carregar: ${err.message}`}));
   }
 }
+$("scenario").addEventListener("change", () => { state.selected.clear(); loadScenarios(); updateCompare(); });
 
-async function loadStats() {
-  const box = $("tab-stats");
-  try {
-    const s = await api("/api/stats");
-    const stat = (value, text) => el("div", {className: "stat"}, [el("b", {textContent: value}), el("small", {textContent: text})]);
-    const cards = el("div", {className: "stats"}, [
-      stat(s.model_calls, "chamadas ao modelo"),
-      stat(`${s.cache_hits} (${Math.round(s.cache_hit_rate * 100)}%)`, "cache hits"),
-      stat(s.tokens_total, "tokens gastos"),
-      stat(s.tokens_saved_by_cache, "tokens economizados pelo cache"),
-      stat(s.runs_with_repair, "com correção de JSON"),
-      stat(s.evaluated_runs, "execuções avaliadas"),
+function renderScenarioRuns() {
+  const rows = state.scenarioRuns.map((r) => {
+    const box = el("input", {type: "checkbox", "aria-label": `Comparar ${r.run_id}`, checked: state.selected.has(r.run_id), disabled: r.score == null,
+      title: r.score == null ? "Avalie antes de comparar" : "", onchange: (e) => {
+        if (e.target.checked) state.selected.add(r.run_id); else state.selected.delete(r.run_id);
+        updateCompare();
+      }});
+    return el("tr", {class: state.evalRun && state.evalRun.run_id === r.run_id ? "selected" : ""}, [
+      el("td", {}, box), el("td", {text: shortType(r.content_type)}), el("td", {}, vbadge(r.prompt_version)),
+      el("td", {class: "mono", text: r.run_id}), el("td", {class: "muted", text: when(r.timestamp)}),
+      el("td", {}, r.score == null ? el("span", {class: "muted", text: "sem nota"}) : el("b", {text: `${r.score}/15`})),
+      el("td", {}, el("button", {type: "button", class: "table-btn", text: r.score == null ? "Avaliar" : "Reavaliar", onclick: () => openRun(r.run_id)})),
     ]);
-    const head = el("tr", {}, ["versão", "tipo", "execuções", "latência média", "tokens médios"].map((h) => el("th", {textContent: h})));
-    const rows = s.by_version_and_type.map((g) => el("tr", {}, [g.prompt_version, g.content_type, g.runs,
-      `${(g.avg_latency_ms / 1000).toFixed(1)}s`, g.avg_tokens].map((v) => el("td", {textContent: v}))));
-    box.replaceChildren(cards, el("table", {}, [head, ...rows]));
+  });
+  $("scenario-runs").replaceChildren(el("table", {}, [
+    el("thead", {}, el("tr", {}, ["Comparar", "Tipo", "Versão", "run_id", "Quando", "Nota", ""].map((h) => el("th", {text: h})))),
+    el("tbody", {}, rows),
+  ]));
+  updateCompare();
+}
+
+async function openEvaluation(runId) {
+  showView("evaluate");
+  await loadScenarios(runId);
+}
+
+async function openRun(runId) {
+  try {
+    const run = state.evalRun = await api(`/api/run?id=${encodeURIComponent(runId)}`);
+    renderScenarioRuns();
+    const out = $("eval-output");
+    out.replaceChildren(
+      el("header", {}, [el("div", {class: "row"}, [vbadge(run.prompt_version), el("b", {text: typeLabel(run.content_type)}),
+        el("span", {class: "muted", text: `· ${customerName(run.customer_id)} · ${run.ticket_id}`})]), el("code", {class: "muted", text: run.run_id})]),
+      el("div", {class: "body"}, renderOutput(run)),
+    );
+    renderRubric(run);
+    $("eval-area").hidden = false;
+    $("eval-area").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
   } catch (err) {
-    box.replaceChildren(el("p", {className: "error", textContent: `Erro: ${err.message}`}));
+    toast(`Não foi possível abrir: ${err.message}`);
   }
 }
 
-function showTab(name) {
-  for (const b of document.querySelectorAll(".tabs button")) b.classList.toggle("active", b.dataset.tab === name);
-  for (const t of ["results", "history", "stats"]) $(`tab-${t}`).hidden = t !== name;
-  if (name === "history") loadHistory();
-  if (name === "stats") loadStats();
+function renderRubric(run) {
+  const {criteria, scale} = state.options.rubric;
+  const current = (run.evaluation && run.evaluation.criteria) || {};
+  const values = Object.fromEntries(criteria.map((c) => [c.id, (current[c.id] || {}).score || null]));
+  const form = $("rubric");
+  const total = el("b", {style: "font-size: 18px"});
+  const refreshTotal = () => {
+    const filled = Object.values(values).filter(Boolean);
+    total.textContent = filled.length === criteria.length ? String(filled.reduce((a, b) => a + b, 0)) : "—";
+  };
+  const blocks = criteria.map((c) => {
+    const level = el("span", {class: "small", style: "margin-left: 6px; color: var(--text-2)", text: values[c.id] ? scale[values[c.id]] : "sem nota"});
+    const buttons = [1, 2, 3, 4, 5].map((n) => el("button", {type: "button", role: "radio", "aria-checked": String(values[c.id] === n),
+      "aria-label": `${n}: ${scale[n]}`, text: String(n), onclick: () => {
+        values[c.id] = n;
+        for (const b of buttons) b.setAttribute("aria-checked", String(Number(b.textContent) === n));
+        level.textContent = scale[n];
+        refreshTotal();
+      }}));
+    const text = el("textarea", {id: `j-${c.id}`, rows: 2, maxlength: 1000, name: c.id, value: (current[c.id] || {}).justification || ""});
+    return el("div", {class: "criterion"}, [
+      el("b", {text: c.label}), el("span", {class: "small muted", text: c.description}),
+      el("div", {class: "scores", role: "radiogroup", "aria-label": c.label}, [...buttons, level]),
+      el("label", {class: "small muted", for: `j-${c.id}`, text: "Justificativa"}), text,
+    ]);
+  });
+  refreshTotal();
+  const cached = run.cache_hit;
+  const save = el("button", {type: "submit", class: "primary", style: "margin-left: auto; font-size: 14px", text: "Salvar avaliação", disabled: cached});
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const scores = {};
+    for (const c of criteria) {
+      const justification = $(`j-${c.id}`).value.trim();
+      if (!values[c.id] || !justification) { toast(`Dê nota e justificativa para “${c.label}”.`); $(`j-${c.id}`).focus(); return; }
+      scores[c.id] = {score: values[c.id], justification};
+    }
+    save.disabled = true;
+    try {
+      const res = await api("/api/evaluate", {run_id: run.run_id, scores});
+      toast(`Avaliação salva: ${res.evaluation.total}/15.`);
+      state.evalRun = {...run, evaluation: res.evaluation};
+      await loadScenarios();
+    } catch (err) {
+      toast(`Não foi possível salvar: ${err.message}`);
+    } finally {
+      save.disabled = false;
+    }
+  };
+  form.replaceChildren(
+    el("div", {class: "row", style: "justify-content: space-between"}, [el("h2", {text: "Rubrica"}),
+      el("span", {class: "small muted", text: "1 insuficiente · 3 adequado · 5 excelente"})]),
+    cached ? el("div", {class: "box warn", text: `Este registro veio do cache. Avalie a execução original ${run.source_run_id}.`}) : null,
+    ...blocks,
+    el("div", {class: "row"}, [el("span", {class: "small"}, ["Total ", total, " /15"]), save]),
+  );
 }
-for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => showTab(b.dataset.tab));
 
-init().catch((err) => { $("model").textContent = `Erro ao carregar: ${err.message}`; });
+function updateCompare() {
+  const n = state.selected.size;
+  $("compare-count").textContent = n ? `${n} ${n === 1 ? "execução marcada" : "execuções marcadas"}` : "Nenhuma execução marcada.";
+  $("compare-btn").disabled = n < 2;
+}
+
+$("compare-btn").addEventListener("click", async () => {
+  $("compare-btn").disabled = true;
+  try {
+    const res = await api("/api/compare", {run_ids: [...state.selected], verdict: $("verdict").value});
+    renderComparison(res.comparison, res.saved_to);
+  } catch (err) {
+    $("compare-result").replaceChildren(el("div", {class: "error", role: "alert", text: err.message}));
+  } finally {
+    updateCompare();
+  }
+});
+
+function renderComparison(c, savedTo) {
+  const vs = c.versions;
+  const first = vs[0], last = vs[vs.length - 1];
+  const crit = state.options.rubric.criteria;
+  const deltaPill = (d) => el("span", {class: `delta ${d > 0 ? "up" : d < 0 ? "down" : "same"}`, text: d > 0 ? `+${d}` : String(d)});
+  const rows = c.by_content_type.map((g) => {
+    const a = g.versions[first], b = g.versions[last];
+    const tok = (x) => fmt(((x && x.metrics && x.metrics.usage) || {}).total_tokens);
+    return el("tr", {}, [
+      el("td", {}, el("b", {text: shortType(g.content_type)})),
+      ...crit.map((k) => el("td", {text: `${a ? a.scores[k.id] : "—"} → ${b ? b.scores[k.id] : "—"}`})),
+      el("td", {}, [`${a ? a.total : "—"} → ${b ? b.total : "—"}`, a && b ? deltaPill(b.total - a.total) : null]),
+      el("td", {class: "muted", text: `${tok(a)} → ${tok(b)}`}),
+    ]);
+  });
+  $("compare-result").replaceChildren(el("div", {class: "stack", style: "gap: 12px"}, [
+    el("div", {class: "row"}, [
+      el("b", {text: `Comparação ${vs.join(" × ")}`}),
+      ...vs.map((v) => el("span", {class: "small"}, [`${v} `, el("b", {style: "font-size: 18px", text: String(c.overall_totals[v])})])),
+      el("span", {class: "status fresh", text: `vencedor: ${c.overall_winner}`}),
+    ]),
+    el("div", {class: "table-wrap"}, el("table", {}, [
+      el("thead", {}, el("tr", {}, ["Tipo", ...crit.map((k) => k.label), `Total ${first} → ${last}`, "Tokens"].map((h) => el("th", {text: h})))),
+      el("tbody", {}, rows),
+    ])),
+    savedTo ? el("span", {class: "small muted"}, ["Salva em ", el("code", {text: savedTo})]) : null,
+  ]));
+}
+
+// ------------------------------------------------------------------ histórico e métricas
+async function loadHistoryView() {
+  try {
+    const [s, h] = await Promise.all([api("/api/stats"), api("/api/history")]);
+    state.history = h.runs;
+    $("stats-tiles").replaceChildren(
+      tile(fmt(s.model_calls), `chamadas ao modelo · ${fmt(s.total_runs)} execuções`),
+      tile(fmt(s.cache_hits), `cache hits (${Math.round((s.cache_hit_rate || 0) * 100)}%)`),
+      tile(fmt(s.tokens_saved_by_cache), `tokens economizados · ${fmt(s.tokens_total)} gastos`),
+      tile(fmt(s.runs_with_repair), "com correção de JSON"),
+      tile(fmt(s.evaluated_runs), "avaliadas com a rubrica"),
+    );
+    renderBars(s.by_version_and_type || []);
+    renderHistoryTable();
+  } catch (err) {
+    $("stats-tiles").replaceChildren(el("div", {class: "error", text: `Erro ao carregar: ${err.message}`}));
+  }
+}
+
+function renderBars(groups) {
+  const max = Math.max(1, ...groups.map((g) => g.avg_tokens || 0));
+  const types = state.options.content_types.map((c) => c.id).filter((t) => groups.some((g) => g.content_type === t));
+  if (!types.length) return $("bars").replaceChildren(el("p", {class: "muted", text: "Sem execuções ainda."}));
+  $("bars").replaceChildren(...types.map((t) => el("div", {class: "bar-row"}, [
+    el("b", {text: shortType(t)}),
+    el("div", {class: "stack", style: "gap: 4px"}, groups.filter((g) => g.content_type === t).map((g) => el("div", {class: "bar-line"}, [
+      el("span", {class: "muted", text: g.prompt_version}),
+      el("div", {class: "bar-track"}, el("div", {class: `bar${isDefault(g.prompt_version) ? " default" : ""}`, style: `width: ${Math.round((g.avg_tokens || 0) / max * 100)}%`})),
+      el("span", {text: fmt(Math.round(g.avg_tokens || 0))}),
+    ]))),
+  ])));
+}
+
+function renderHistoryTable() {
+  const fc = $("f-customer").value, fv = $("f-version").value, fe = $("f-evaluated").checked;
+  const runs = state.history.filter((r) => (!fc || r.customer_id === fc) && (!fv || r.prompt_version === fv) && (!fe || r.score != null));
+  if (!runs.length) return $("history-table").replaceChildren(el("p", {class: "empty", text: "Nenhuma execução com esses filtros."}));
+  $("history-table").replaceChildren(el("table", {}, [
+    el("thead", {}, el("tr", {}, ["run_id", "Quando", "Cliente · ticket", "Tipo", "Versão", "Origem", "Tokens", "Nota", ""].map((h) => el("th", {text: h})))),
+    el("tbody", {}, runs.map((r) => el("tr", {}, [
+      el("td", {class: "mono", text: r.run_id}),
+      el("td", {class: "muted", text: when(r.timestamp)}),
+      el("td", {text: `${customerName(r.customer_id)} · ${r.ticket_id}`}),
+      el("td", {text: shortType(r.content_type)}),
+      el("td", {}, vbadge(r.prompt_version)),
+      el("td", {}, r.cache_hit ? el("span", {class: "status cache"}, ["cache de ", el("code", {text: r.source_run_id})]) : el("span", {class: "muted", text: "modelo"})),
+      el("td", {class: "muted", text: r.cache_hit ? "0" : fmt(r.tokens)}),
+      el("td", {}, r.score == null ? el("span", {class: "muted", text: "—"}) : el("b", {text: `${r.score}/15`})),
+      el("td", {}, el("button", {type: "button", class: "table-btn", text: "Abrir", onclick: () => openEvaluation(r.cache_hit ? r.source_run_id : r.run_id)})),
+    ]))),
+  ]));
+}
+for (const id of ["f-customer", "f-version", "f-evaluated"]) $(id).addEventListener("change", renderHistoryTable);
+
+init().catch((err) => {
+  $("env-model").textContent = "erro ao carregar";
+  $("results").replaceChildren(el("div", {class: "error", role: "alert", text: `Não foi possível carregar as opções: ${err.message}`}));
+});
 </script>
 </body>
 </html>
