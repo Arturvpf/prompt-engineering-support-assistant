@@ -1,0 +1,21 @@
+# Segredos e dados locais nunca entram na imagem
+.env
+.env.*
+!.env.example
+*.key
+outputs/
+demo/
+
+# Ambiente e ferramentas
+.venv/
+venv/
+.git/
+.github/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.vscode/
+.idea/
+tests/
